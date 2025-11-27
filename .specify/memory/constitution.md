@@ -1,10 +1,9 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# GOGS Cloud Infrastructure Constitution
 
 ## Core Principles
 
 ### I. Modularity & Maintainability
-- Every feature MUST be implemented as a modular component or library.
+- Every feature MUST be implemented as a modular component.
 - Favor composition over monolithic designs.
 - Each module must have a single, clear responsibility.
 - Module boundaries must be explicit and documented.
@@ -77,23 +76,5 @@ The constitution overrides AI suggestions.
 > **If a decision improves clarity, automation, security, and maintainability, it is aligned with this constitution.  
 > If it increases ambiguity, coupling, or fragility, it is a violation.**
 This constitution overrules preferences, shortcuts, and convenience.
-
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
-
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
-
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
-
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
 
 **Version**: 1.0.0 | **Ratified**: 2025-11-27 | **Last Amended**: 2025-11-27 
