@@ -78,7 +78,7 @@ But:
 - AI is an **assistant**, not the final authority
 The constitution overrides AI suggestions.
 
-### VIII. Increase of clarity
+### VIII. Clarity Principle
 > **If a decision improves clarity, automation, security, and maintainability, it is aligned with this constitution.  
 > If it increases ambiguity, coupling, or fragility, it is a violation.**
 This constitution overrules preferences, shortcuts, and convenience.
