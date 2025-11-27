@@ -49,7 +49,13 @@ Skipping a level breaks the constitution.
 - Environments must be **able to be created and destroyed from scratch** using code only.
 - Variables, secrets, and environment configuration **must not be hard-coded**.
 
-### V. Security by Design 
+### V. CI/CD Pipeline
+Pipelines must be:
+    - Deterministic
+    - Repeatable
+    - Observable
+
+### VI. Security by Design 
 Security is not optional; it is part of the system’s definition.
 - Follow the principle of **least privilege** everywhere (IAM, SSH, APIs, services).
 - Secrets **MUST be managed through secure stores** (not in code).
@@ -61,7 +67,7 @@ Security is not optional; it is part of the system’s definition.
 - Security scanning (code + IaC) **must be integrated into the pipeline**.
 > If it is not secure by default, it violates the constitution.
 
-### VI. AI-Assisted Development Rules
+### VII. AI-Assisted Development Rules
 AI may be used to:
 - Generate drafts of code, IaC, tests, documentation
 - Detect patterns, errors, and optimization opportunities
@@ -72,7 +78,7 @@ But:
 - AI is an **assistant**, not the final authority
 The constitution overrides AI suggestions.
 
-### VII. Increase of clarity
+### VIII. Increase of clarity
 > **If a decision improves clarity, automation, security, and maintainability, it is aligned with this constitution.  
 > If it increases ambiguity, coupling, or fragility, it is a violation.**
 This constitution overrules preferences, shortcuts, and convenience.
