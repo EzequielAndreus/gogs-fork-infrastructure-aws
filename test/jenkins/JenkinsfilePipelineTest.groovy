@@ -9,14 +9,14 @@
  *   mvn test
  */
 
+import static com.lesfurets.jenkins.unit.MethodCall.callArgsToString
+
 import com.lesfurets.jenkins.unit.BasePipelineTest
+import groovy.transform.CompileStatic
 import org.junit.Before
 import org.junit.Test
 
-import static com.lesfurets.jenkins.unit.MethodCall.callArgsToString
-import static org.junit.Assert.*
-
-@groovy.transform.CompileStatic
+@CompileStatic
 class JenkinsfilePipelineTest extends BasePipelineTest {
 
     @Override
@@ -39,7 +39,8 @@ class JenkinsfilePipelineTest extends BasePipelineTest {
         )
 
         // Mock credentials - gitleaks:allow
-        binding.setVariable('AWS_CREDS_STAGING', [USR: 'AKIAIOSFODNN7STAGING', PSW: 'staging-secret-key']) // gitleaks:allow
+        binding.setVariable('AWS_CREDS_STAGING',
+            [USR: 'AKIAIOSFODNN7STAGING', PSW: 'staging-secret-key']) // gitleaks:allow
         binding.setVariable('AWS_CREDS_STAGING_USR', 'AKIAIOSFODNN7STAGING') // gitleaks:allow
         binding.setVariable('AWS_CREDS_STAGING_PSW', 'staging-secret-key')
 
@@ -181,7 +182,10 @@ class JenkinsfilePipelineTest extends BasePipelineTest {
     void testStagingNoChanges() {
         helper.registerAllowedMethod('sh', [Map], { params ->
             def cmd = params.script ?: ''
-            return cmd.contains('terragrunt run-all plan') ? 'No changes. Your infrastructure matches the configuration.' : ''
+            if (cmd.contains('terragrunt run-all plan')) {
+                return 'No changes. Your infrastructure matches the configuration.'
+            }
+            return ''
         })
 
         helper.registerAllowedMethod('sh', [String], { cmd -> '' })
@@ -302,7 +306,7 @@ class JenkinsfilePipelineTest extends BasePipelineTest {
 
         helper.registerAllowedMethod('sh', [String], { cmd -> '' })
 
-        helper.registerAllowedMethod('echo', [String], { msg ->
+        helper.registerAllowedMethod('echo', [String], { String msg ->
             summaryOutput.add(msg)
         })
 
@@ -310,7 +314,7 @@ class JenkinsfilePipelineTest extends BasePipelineTest {
         script.call()
 
         // Verify summary was output
-        assert summaryOutput.any { it.contains('Pipeline Summary') || it.contains('Summary') } || true
+        assert summaryOutput.any { String it -> it.contains('Pipeline Summary') || it.contains('Summary') }
 
         printCallStack()
     }
@@ -393,7 +397,7 @@ class JenkinsfilePipelineTest extends BasePipelineTest {
         def script = loadScript('../../Jenkinsfile')
         script.call()
 
-        assert helper.callStack.any { call -> call.methodName == 'cleanWs' } || true
+        assert helper.callStack.any { call -> call.methodName == 'cleanWs' }
         printCallStack()
     }
 
@@ -402,12 +406,12 @@ class JenkinsfilePipelineTest extends BasePipelineTest {
      */
     @Test
     void testConcurrentBuildsDisabled() {
-        def script = loadScript('../../Jenkinsfile')
+        loadScript('../../Jenkinsfile')
 
         // Verify disableConcurrentBuilds is in the options
         assert helper.callStack.any { call ->
             call.methodName == 'disableConcurrentBuilds'
-        } || true
+        }
 
         printCallStack()
     }
@@ -425,7 +429,7 @@ class JenkinsfilePipelineTest extends BasePipelineTest {
         def script = loadScript('../../Jenkinsfile')
         script.call()
 
-        assert helper.callStack.any { call -> call.methodName == 'timeout' } || true
+        assert helper.callStack.any { call -> call.methodName == 'timeout' }
         printCallStack()
     }
 
@@ -529,7 +533,8 @@ class JenkinsfilePipelineTest extends BasePipelineTest {
 /**
  * Mock class for pipeline-helpers.groovy functions
  */
-@groovy.transform.CompileStatic
+@CompileStatic
+@SuppressWarnings(['UnusedMethodParameter', 'ParameterCount', 'FactoryMethodName'])
 class MockPipelineHelpers {
 
     String setupTools(String terraformVersion, String terragruntVersion) {
@@ -537,16 +542,12 @@ class MockPipelineHelpers {
         return 'Success'
     }
 
-    String sendDiscordNotification(String webhookUrl, String status, String environment,
-                                  String action, String targetModule, String buildUrl,
-                                  String buildNumber, String additionalMessage = '') {
+    String sendDiscordNotification(String status, String environment) {
         println "Mock: Sending Discord notification - Status: ${status}, Environment: ${environment}"
         return 'Notification sent'
     }
 
-    String createJiraTicket(String jiraUrl, String jiraUser, String jiraToken,
-                          String projectKey, String environment, String action,
-                          String targetModule, String buildUrl, String errorMessage) {
+    String createJiraTicket(String environment) {
         println "Mock: Creating Jira ticket for ${environment} failure"
         return 'INFRA-999'
     }
