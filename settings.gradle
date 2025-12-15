@@ -1,1 +1,4 @@
+@groovy.transform.CompileStatic
+class SettingsConfig {}
+
 rootProject.name = 'gogs-infrastructure-aws'

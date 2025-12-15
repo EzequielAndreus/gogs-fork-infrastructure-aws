@@ -52,7 +52,7 @@ gradle test
 
 ## Test Structure
 
-```
+```text
 test/jenkins/
 ├── build.gradle                    # Gradle build configuration
 ├── JenkinsfilePipelineTest.groovy  # Main test class
@@ -61,8 +61,8 @@ test/jenkins/
 
 ## Test Cases
 
-| Test Name | Description |
-|-----------|-------------|
+| Test Name                           | Description                                           |
+|-------------------------------------|-------------------------------------------------------|
 | `testPipelineLoadsSuccessfully` | Verifies the Jenkinsfile loads without errors |
 | `testCheckoutStage` | Tests the SCM checkout stage execution |
 | `testSetupToolsStage` | Verifies Terraform and Terragrunt installation |
