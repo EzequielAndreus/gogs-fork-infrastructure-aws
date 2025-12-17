@@ -61,8 +61,8 @@ test/jenkins/
 
 ## Test Cases
 
-| Test Name                           | Description                                           |
-|-------------------------------------|-------------------------------------------------------|
+| Test Name | Description |
+| ------------------------------------- | ------------------------------------------------------- |
 | `testPipelineLoadsSuccessfully` | Verifies the Jenkinsfile loads without errors |
 | `testCheckoutStage` | Tests the SCM checkout stage execution |
 | `testSetupToolsStage` | Verifies Terraform and Terragrunt installation |
@@ -129,7 +129,7 @@ The `MockPipelineHelpers` class simulates the shared library functions:
 
 Tests generate reports in:
 
-```
+```text
 build/
 ├── reports/
 │   └── tests/
