@@ -187,7 +187,7 @@ func TestSecretsManagerModuleRecoveryWindow(t *testing.T) {
 
 	for _, window := range recoveryWindows {
 		window := window
-		t.Run("RecoveryWindow_"+string(rune(window)), func(t *testing.T) {
+		t.Run("RecoveryWindow_"+strconv.Itoa(window)), func(t *testing.T) {
 			t.Parallel()
 
 			terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
