@@ -18,14 +18,14 @@ This document provides an overview of all Terraform modules in this repository, 
 
 **Path:** `modules/vpc/`
 
-### Description
+### VPC Description
 
 Creates the foundational network infrastructure for the AWS environment. This module provisions a Virtual Private Cloud (VPC) with public and private subnets across multiple availability zones, enabling secure and isolated network architecture.
 
-### Key Resources
+### VPC Key Resources
 
 | Resource | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `aws_vpc` | Main VPC with DNS support enabled |
 | `aws_internet_gateway` | Internet Gateway for public subnet access |
 | `aws_subnet` (public) | Public subnets with auto-assign public IP |
@@ -34,17 +34,17 @@ Creates the foundational network infrastructure for the AWS environment. This mo
 | `aws_eip` | Elastic IP for NAT Gateway |
 | `aws_route_table` | Route tables for public and private subnets |
 
-### Key Variables
+### VPC Key Variables
 
 | Variable | Type | Description |
-|----------|------|-------------|
+| -------- | ---- | ----------- |
 | `vpc_cidr` | string | CIDR block for the VPC (default: `10.0.0.0/16`) |
 | `public_subnet_cidrs` | list(string) | CIDR blocks for public subnets |
 | `private_subnet_cidrs` | list(string) | CIDR blocks for private subnets |
 | `availability_zones` | list(string) | List of AZs to deploy subnets |
 | `enable_nat_gateway` | bool | Enable NAT Gateway for private subnets |
 
-### Outputs
+### VPC Outputs
 
 - `vpc_id` - VPC identifier
 - `public_subnet_ids` - List of public subnet IDs
@@ -57,14 +57,14 @@ Creates the foundational network infrastructure for the AWS environment. This mo
 
 **Path:** `modules/ecs/`
 
-### Description
+### ECS Description
 
 Deploys a containerized application using AWS Elastic Container Service (ECS) with Fargate launch type. This module creates an ECS cluster, task definitions, services, and an Application Load Balancer for Docker containers pulled from DockerHub.
 
-### Key Resources
+### ECS Key Resources
 
 | Resource | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `aws_ecs_cluster` | ECS cluster with Container Insights |
 | `aws_ecs_task_definition` | Fargate task definition for containers |
 | `aws_ecs_service` | ECS service with desired task count |
@@ -76,19 +76,20 @@ Deploys a containerized application using AWS Elastic Container Service (ECS) wi
 | `aws_appautoscaling_target` | Auto-scaling configuration |
 | `aws_cloudwatch_log_group` | Log group for container logs |
 
-### Key Variables
+### ECS Key Variables
 
 | Variable | Type | Description |
-|----------|------|-------------|
+| -------- | ---- | ----------- |
 | `docker_image` | string | Docker image from DockerHub (e.g., `username/image:tag`) |
 | `container_port` | number | Port exposed by the container (default: `8080`) |
 | `task_cpu` | number | CPU units for the task (256-4096) |
 | `task_memory` | number | Memory in MB for the task |
 | `desired_count` | number | Number of task instances to run |
-| `min_capacity` / `max_capacity` | number | Auto-scaling boundaries |
+| `min_capacity` | number | Minimum number of ECS tasks (auto-scaling lower boundary) |
+| `max_capacity` | number | Maximum number of ECS tasks (auto-scaling upper boundary) |
 | `secrets_manager_arns` | list(string) | ARNs of secrets accessible by ECS |
 
-### Outputs
+### ECS Outputs
 
 - `cluster_id` - ECS cluster identifier
 - `service_name` - ECS service name
@@ -102,24 +103,24 @@ Deploys a containerized application using AWS Elastic Container Service (ECS) wi
 
 **Path:** `modules/rds/`
 
-### Description
+### RDS Description
 
 Provisions an Amazon RDS PostgreSQL database instance with configurable settings for high availability, security, and performance. Includes subnet groups, parameter groups, and security configurations for secure database access.
 
-### Key Resources
+### RDS Key Resources
 
 | Resource | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `aws_db_instance` | RDS PostgreSQL instance |
 | `aws_db_subnet_group` | Subnet group for RDS |
 | `aws_db_parameter_group` | Database parameter configuration |
 | `aws_security_group` | Security group for database access |
 | `aws_iam_role` | Enhanced monitoring role (optional) |
 
-### Key Variables
+### RDS Key Variables
 
 | Variable | Type | Description |
-|----------|------|-------------|
+| -------- | ---- | ----------- |
 | `db_engine` | string | Database engine (default: `postgres`) |
 | `db_engine_version` | string | Engine version (default: `15.4`) |
 | `db_instance_class` | string | Instance class (default: `db.t3.micro`) |
@@ -130,7 +131,7 @@ Provisions an Amazon RDS PostgreSQL database instance with configurable settings
 | `deletion_protection` | bool | Prevent accidental deletion |
 | `allowed_security_groups` | list(string) | Security groups allowed to connect |
 
-### Outputs
+### RDS Outputs
 
 - `db_instance_endpoint` - Database connection endpoint
 - `db_instance_port` - Database port
@@ -143,14 +144,14 @@ Provisions an Amazon RDS PostgreSQL database instance with configurable settings
 
 **Path:** `modules/ec2-splunk/`
 
-### Description
+### EC2-Splunk Description
 
 Deploys an EC2 instance configured for Splunk Enterprise monitoring. This module provisions the instance with necessary IAM roles for CloudWatch and Secrets Manager access, EBS volumes for data storage, and security configurations for Splunk web interface and HEC access.
 
-### Key Resources
+### EC2-Splunk Key Resources
 
 | Resource | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `aws_instance` | EC2 instance with Splunk installation script |
 | `aws_ebs_volume` | Additional EBS volume for Splunk data |
 | `aws_volume_attachment` | Attaches data volume to instance |
@@ -160,10 +161,19 @@ Deploys an EC2 instance configured for Splunk Enterprise monitoring. This module
 | `aws_eip` | Elastic IP for consistent access |
 | `aws_key_pair` | SSH key for instance access |
 
-### Key Variables
+### Secret Types
+
+| Secret | Path | Description |
+| ------ | ---- | ----------- |
+| Database | `{project}/{env}/database` | DB username, password, host, port, database name |
+| Application | `{project}/{env}/application` | Application-specific secrets |
+| Splunk | `{project}/{env}/splunk` | Splunk admin password and HEC token |
+| DockerHub | `{project}/{env}/dockerhub` | DockerHub username and password/token |
+
+### EC2-Splunk Key Variables
 
 | Variable | Type | Description |
-|----------|------|-------------|
+| -------- | ---- | ----------- |
 | `ami_id` | string | AMI ID (Amazon Linux 2 recommended) |
 | `instance_type` | string | EC2 instance type (default: `t3.medium`) |
 | `root_volume_size` | number | Root volume size in GB (default: `50`) |
@@ -173,7 +183,7 @@ Deploys an EC2 instance configured for Splunk Enterprise monitoring. This module
 | `allowed_cidr` | list(string) | CIDRs allowed to access Splunk web |
 | `ssh_cidr` | list(string) | CIDRs allowed SSH access |
 
-### Outputs
+### EC2-Splunk Outputs
 
 - `instance_id` - EC2 instance identifier
 - `public_ip` - Public IP address
@@ -187,32 +197,23 @@ Deploys an EC2 instance configured for Splunk Enterprise monitoring. This module
 
 **Path:** `modules/secrets-manager/`
 
-### Description
+### Secrets Manager Description
 
 Manages sensitive credentials and configuration using AWS Secrets Manager. Creates encrypted secrets for database credentials, application secrets, Splunk credentials, and DockerHub authentication with optional KMS encryption.
 
-### Key Resources
+### Secrets Manager Key Resources
 
 | Resource | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `aws_secretsmanager_secret` | Secret containers (database, app, Splunk, DockerHub) |
 | `aws_secretsmanager_secret_version` | Secret values |
 | `aws_kms_key` | KMS key for encryption (optional) |
 | `aws_kms_alias` | KMS key alias |
 
-### Secret Types
-
-| Secret | Path | Description |
-|--------|------|-------------|
-| Database | `{project}/{env}/database` | DB username, password, host, port, database name |
-| Application | `{project}/{env}/application` | Application-specific secrets |
-| Splunk | `{project}/{env}/splunk` | Splunk admin password and HEC token |
-| DockerHub | `{project}/{env}/dockerhub` | DockerHub username and password/token |
-
-### Key Variables
+### Secrets Manager Key Variables
 
 | Variable | Type | Description |
-|----------|------|-------------|
+| -------- | ---- | ----------- |
 | `db_username` | string | Database username (sensitive) |
 | `db_password` | string | Database password (sensitive) |
 | `application_secrets` | map(string) | Application secrets key-value pairs |
@@ -221,7 +222,7 @@ Manages sensitive credentials and configuration using AWS Secrets Manager. Creat
 | `create_kms_key` | bool | Create dedicated KMS key (default: `true`) |
 | `recovery_window_in_days` | number | Days before permanent deletion (default: `30`) |
 
-### Outputs
+### Secrets Manager Outputs
 
 - `database_secret_arn` - ARN of database credentials secret
 - `application_secret_arn` - ARN of application secrets
@@ -233,23 +234,16 @@ Manages sensitive credentials and configuration using AWS Secrets Manager. Creat
 
 ## Module Dependencies
 
-```
-┌─────────────────┐
-│       VPC       │
-└────────┬────────┘
-         │
-    ┌────┴────┬─────────────┐
-    ▼         ▼             ▼
+```text
+┌───────────────┬─────────────────┐
+│      VPC      │ Secrets Manager │
+└───────┬───────┴───────┬─────────┘
+        │               │
+    ┌───▼────┬─────┬────▼─────┐
+    │        │     │          │
 ┌───────┐ ┌───────┐ ┌───────────────┐
 │  ECS  │ │  RDS  │ │  EC2-Splunk   │
-└───┬───┘ └───┬───┘ └───────┬───────┘
-    │         │             │
-    └─────────┴─────────────┘
-              │
-              ▼
-    ┌─────────────────┐
-    │ Secrets Manager │
-    └─────────────────┘
+└───────┘ └───────┘ └───────────────┘
 ```
 
 ### Dependency Flow
@@ -264,7 +258,7 @@ Manages sensitive credentials and configuration using AWS Secrets Manager. Creat
 
 Unit tests for each module are located in the `test/` directory:
 
-```
+```text
 test/
 ├── vpc_test.go           # VPC module tests
 ├── ecs_test.go           # ECS module tests
@@ -291,3 +285,5 @@ go test -v -timeout 30m
 4. **Use Multi-AZ** - For production database deployments
 5. **Tag all resources** - Use the `tags` variable consistently
 6. **Review plans** - Always review `terragrunt plan` before applying
+
+> Terraform Cloud is the proposed backend to store states. Any further information will be updated ASAP. Expected credential to be added: Terraform Cloud API Token.
