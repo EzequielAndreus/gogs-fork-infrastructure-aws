@@ -237,16 +237,16 @@ func TestSecretsManagerModuleApplicationSecrets(t *testing.T) {
 		{
 			name: "SingleSecret",
 			applicationSecrets: map[string]string{
-				"API_KEY": "test-api-key-12345",
+				"API_KEY": "placeholder-api-key",
 			},
 		},
 		{
 			name: "MultipleSecrets",
 			applicationSecrets: map[string]string{
-				"API_KEY":        "test-api-key-12345",
-				"SECRET_KEY":     "secret-key-abcdef",
-				"ENCRYPTION_KEY": "encryption-key-xyz",
-				"JWT_SECRET":     "jwt-secret-token",
+				"API_KEY":        "placeholder-api-key",
+				"SECRET_KEY":     "placeholder-secret-key",
+				"ENCRYPTION_KEY": "placeholder-encryption-key",
+				"JWT_SECRET":     "placeholder-jwt-secret",
 			},
 		},
 	}

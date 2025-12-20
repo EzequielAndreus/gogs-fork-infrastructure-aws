@@ -10,7 +10,7 @@ This directory contains unit tests for all Terraform modules in this repository 
 
 ## Test Structure
 
-```
+```text
 test/
 ├── go.mod                    # Go module definition
 ├── doc.go                    # Package documentation
@@ -87,13 +87,13 @@ For full integration testing that creates real AWS resources:
 
 ## Test Coverage
 
-| Module | Tests | Coverage |
-|--------|-------|----------|
-| VPC | 4 | CIDR validation, NAT Gateway toggle, tagging |
-| ECS | 4 | Container config, auto-scaling, Docker images |
-| RDS | 5 | DB engines, instance classes, storage, production config |
-| EC2-Splunk | 5 | Instance types, volumes, network, Splunk versions |
-| Secrets Manager | 6 | Secret types, KMS, recovery window, app secrets |
+| Module         | Tests | Coverage                                                 |
+|----------------|-------|----------------------------------------------------------|
+| VPC            | 4     | CIDR validation, NAT Gateway toggle, tagging             |
+| ECS            | 4     | Container config, auto-scaling, Docker images            |
+| RDS            | 5     | DB engines, instance classes, storage, production config |
+| EC2-Splunk     | 5     | Instance types, volumes, network, Splunk versions        |
+| Secrets Manager| 6     | Secret types, KMS, recovery window, app secrets          |
 
 ## Writing New Tests
 
@@ -166,12 +166,12 @@ gradle wrapper
 
 ### Common Issues
 
-| Issue | Solution |
-|-------|----------|
-| "terraform not found" | Ensure Terraform is installed and in PATH |
-| "module not found" | Check TerraformDir path is correct |
-| "variable required" | Add missing required variables to test Vars |
-| "timeout" | Increase timeout with `-timeout` flag |
+| Issue                  | Solution                                     |
+|------------------------|----------------------------------------------|
+| "terraform not found"  | Ensure Terraform is installed and in PATH    |
+| "module not found"     | Check TerraformDir path is correct           |
+| "variable required"    | Add missing required variables to test Vars  |
+| "timeout"              | Increase timeout with `-timeout` flag        |
 
 ### Debug Mode
 
