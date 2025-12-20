@@ -1,0 +1,12 @@
+# Gitleaks configuration to allow test credentials
+[allowlist]
+description = "Allowlist for test credentials and mock data"
+
+# Allow test AWS credentials in test files
+[[allowlist.regexes]]
+regex = "AKIAIOSFODNN7STAGING|AKIAIOSFODNN7PROD"
+description = "Test AWS access keys in JenkinsfilePipelineTest.groovy"
+
+[[allowlist.paths]]
+regex = "test/jenkins/JenkinsfilePipelineTest.groovy"
+description = "Test file with mock credentials"

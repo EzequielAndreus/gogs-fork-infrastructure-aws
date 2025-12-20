@@ -1,0 +1,113 @@
+/**
+ * Gradle build configuration for Jenkins Pipeline Unit Tests
+ *
+ * Usage:
+ *   ./gradlew test              - Run all tests
+ *   ./gradlew test --info       - Run with verbose output
+ *   ./gradlew clean test        - Clean and run tests
+ */
+
+@groovy.transform.CompileStatic
+class BuildConfig {}
+
+plugins {
+    id 'groovy'
+    id 'java'
+}
+
+group = 'com.gogs.infrastructure'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.jenkins-ci.org/public/' }
+}
+
+dependencies {
+    // Jenkins Pipeline Unit testing framework
+    testImplementation 'com.lesfurets:jenkins-pipeline-unit:1.19'
+
+    // JUnit for test framework
+    testImplementation 'junit:junit:4.13.2'
+
+    // Groovy
+    implementation 'org.codehaus.groovy:groovy-all:3.0.19'
+
+    // JSON parsing for Jenkinsfile
+    testImplementation 'org.jenkins-ci.plugins:pipeline-utility-steps:2.15.4'
+
+    // Mock support
+    testImplementation 'org.mockito:mockito-core:5.7.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+sourceSets {
+    main {
+        groovy {
+            srcDirs = ['jenkins/shared']
+        }
+    }
+    test {
+        groovy {
+            srcDirs = ['test/jenkins']
+        }
+        resources {
+            srcDirs = ['.']
+        }
+    }
+}
+
+test {
+    useJUnit()
+
+    testLogging {
+        events 'passed', 'skipped', 'failed', 'standardOut', 'standardError'
+        showExceptions true
+        showCauses true
+        showStackTraces true
+        exceptionFormat 'full'
+    }
+
+    // Set memory for tests
+    minHeapSize = '256m'
+    maxHeapSize = '1g'
+
+    // Fail on first error (optional)
+    failFast = false
+
+    // Generate HTML report
+    reports {
+        html.required = true
+        junitXml.required = true
+    }
+}
+
+// Task to run pipeline tests specifically
+tasks.register('pipelineTest', Test) {
+    description = 'Run Jenkins pipeline integration tests'
+    group = 'verification'
+
+    include '**/JenkinsfilePipelineTest.class'
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}
+
+// Clean task
+clean {
+    delete 'build'
+    delete '.gradle'
+}
+
+// Wrapper task
+wrapper {
+    gradleVersion = '8.4'
+    distributionType = Wrapper.DistributionType.BIN
+}
