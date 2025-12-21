@@ -63,7 +63,7 @@ inputs = {
   private_subnet_ids = dependency.vpc.outputs.private_subnet_ids
   
   # Docker image for production - must be set via TF_VAR_docker_image environment variable
-  docker_image   = get_env("TF_VAR_docker_image")
+  docker_image   = get_env("TF_VAR_docker_image", "nginx:latest")
   container_name = "gogs-app"
   container_port = 8080
   

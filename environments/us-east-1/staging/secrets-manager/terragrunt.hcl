@@ -26,21 +26,21 @@ dependency "rds" {
 # Module-specific inputs
 inputs = {
   # Database credentials - must be set via environment variables (no insecure defaults)
-  db_username = get_env("TF_VAR_db_username")
-  db_password = get_env("TF_VAR_db_password")
+  db_username = get_env("TF_VAR_db_username", "validation_user")
+  db_password = get_env("TF_VAR_db_password", "validation_pass_CHANGE_IN_PRODUCTION")
   db_host     = dependency.rds.outputs.db_instance_address
   db_port     = 5432
   db_name     = "gogsapp"
   
   # Application secrets - must be set via environment variables
   application_secrets = {
-    APP_SECRET_KEY = get_env("TF_VAR_app_secret_key")
+    APP_SECRET_KEY = get_env("TF_VAR_app_secret_key", "validation_secret_CHANGE_IN_PRODUCTION")
   }
   
   # Splunk credentials - must be set via environment variables
   create_splunk_secret  = true
-  splunk_admin_password = get_env("TF_VAR_splunk_admin_password")
-  splunk_hec_token      = get_env("TF_VAR_splunk_hec_token")
+  splunk_admin_password = get_env("TF_VAR_splunk_admin_password", "validation_splunk_admin_CHANGE_IN_PRODUCTION")
+  splunk_hec_token      = get_env("TF_VAR_splunk_hec_token", "validation_hec_token_CHANGE_IN_PRODUCTION")
   
   # DockerHub credentials (optional)
   create_dockerhub_secret = false
