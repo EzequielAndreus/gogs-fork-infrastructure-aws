@@ -5,38 +5,114 @@ This document outlines all credentials and secrets required for the **Continuous
 ## 📋 Table of Contents
 
 1. [Overview](#overview)
-2. [AWS Credentials](#aws-credentials)
-3. [Jenkins Credentials](#jenkins-credentials)
-4. [Discord Webhook Configuration](#discord-webhook-configuration)
-5. [Jira API Configuration](#jira-api-configuration)
-6. [Terraform Variables](#terraform-variables)
-7. [Security Best Practices](#security-best-practices)
-8. [Secret Rotation](#secret-rotation)
-9. [Troubleshooting](#troubleshooting)
+2. [Terraform Cloud Credentials](#terraform-cloud-credentials)
+3. [AWS Credentials](#aws-credentials)
+4. [Jenkins Credentials](#jenkins-credentials)
+5. [Discord Webhook Configuration](#discord-webhook-configuration)
+6. [Jira API Configuration](#jira-api-configuration)
+7. [Terraform Variables](#terraform-variables)
+8. [Security Best Practices](#security-best-practices)
+9. [Secret Rotation](#secret-rotation)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## 🎯 Overview
 
 The Jenkins CD pipeline performs:
-- 🚀 Automatic infrastructure provisioning/updates based on plan detection
-- 🔄 Staging and production deployment with conditional logic
+- 🚀 Runs Terragrunt commands directly on Jenkins agents
+- 📦 Uses Terraform Cloud for state management only
+- 🔄 Automatic change detection via `terraform plan -detailed-exitcode`
 - ✅ Manual approval requirement for production changes
 - 📢 Discord notifications for pipeline events
 - 🎫 Automatic Jira ticket creation on failures
 
 **Pipeline Trigger:** Manual or automated (webhook/SCM polling)
 
+**Architecture:**
+- Jenkins executes: `terragrunt init`, `terragrunt plan`, `terragrunt apply`
+- Terraform Cloud stores: State files (tfstate) with locking
+- No TFC Runs/Agents: All execution happens on Jenkins agents
+
 **Key Features:**
-- No manual parameter selection required
-- Automatic change detection via Terragrunt plan
+- Direct terraform execution (full control)
+- Automatic change detection via exit codes
+- Module dependency ordering (vpc → secrets → apps)
 - Environment-specific credential mapping
 - Discord notifications at each stage
 - Production approval gate
 
 ---
 
+## 🌐 Terraform Cloud Credentials
+
+### Purpose
+
+Terraform Cloud is used **ONLY for state storage**, not for running terraform.
+
+### Required Credentials
+
+| Credential ID | Type | Value | Purpose |
+|--------------|------|-------|---------|
+| `tfc-organization` | Secret text | Your TFC organization name | Identifies TFC organization |
+| `tfc-api-token` | Secret text | TFC API token | Authenticates state backend |
+
+### How to Create TFC Token
+
+1. **Log in**: Go to https://app.terraform.io
+2. **Navigate**: User Settings → Tokens
+3. **Create**: Click "Create an API token"
+4. **Name**: "Jenkins State Backend"
+5. **Copy**: Save token immediately (won't be shown again)
+
+### Add to Jenkins
+
+1. **Navigate**: Jenkins → Manage Jenkins → Credentials
+2. **Click**: Add Credentials
+3. **Configure**:
+   - **Kind**: Secret text
+   - **Secret**: Paste TFC API token
+   - **ID**: `tfc-api-token`
+   - **Description**: "Terraform Cloud API token for state backend"
+
+4. **Repeat** for organization name:
+   - **Secret**: Your organization name (e.g., "my-company")
+   - **ID**: `tfc-organization`
+
+### How It's Used
+
+Jenkins sets environment variable in pipeline:
+```groovy
+environment {
+    TF_TOKEN_app_terraform_io = credentials('tfc-api-token')
+    TF_CLOUD_ORGANIZATION = credentials('tfc-organization')
+}
+```
+
+Terraform automatically reads `TF_TOKEN_app_terraform_io` for backend authentication.
+
+**No manual workspace creation needed** - Terragrunt creates workspaces automatically!
+
+---
+
 ## 🔐 AWS Credentials
+
+### Where AWS Credentials Are Stored
+
+**IMPORTANT**: AWS credentials are **NOT stored in Jenkins**. They must be configured in **Terraform Cloud workspace variables**.
+
+### Required for Each TFC Workspace
+
+For each environment's workspaces (vpc, ecs, rds, etc.), configure in TFC:
+
+1. **Navigate**: TFC → Workspaces → Select workspace → Variables
+2. **Add** environment variables (mark as sensitive):
+
+| Variable Name | Type | Sensitive | Example Value |
+|---------------|------|-----------|---------------|
+| `AWS_ACCESS_KEY_ID` | Environment | ✅ | `AKIA...` |
+| `AWS_SECRET_ACCESS_KEY` | Environment | ✅ | `wJalr...` |
+| `AWS_DEFAULT_REGION` | Environment | ❌ | `us-east-1` |
 
 ### Required IAM Permissions
 

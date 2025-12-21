@@ -1,7 +1,10 @@
 //------------------------------------------------------------------------------
 // Jenkinsfile - Infrastructure Provisioning Pipeline
-// Automatically provisions/updates staging and production based on plan output
+// Runs Terragrunt commands directly, uses Terraform Cloud for state management
 //------------------------------------------------------------------------------
+
+// Load shared helper functions once at pipeline level
+def helpers
 
 pipeline {
     agent any
@@ -15,21 +18,34 @@ pipeline {
 
     environment {
         //----------------------------------------------------------------------
-        // Tool Versions
+        // Terraform Cloud Configuration (State Backend Only)
+        //----------------------------------------------------------------------
+        TF_CLOUD_ORGANIZATION = credentials('tfc-organization')  // Your TF Cloud org name
+        TF_TOKEN_app_terraform_io = credentials('tfc-api-token')  // TF Cloud API token for backend auth
+        
+        //----------------------------------------------------------------------
+        // Terraform/Terragrunt Configuration
         //----------------------------------------------------------------------
         TERRAFORM_VERSION = '1.5.7'
         TERRAGRUNT_VERSION = '0.53.0'
+        AWS_DEFAULT_REGION = 'us-east-1'  // Can be overridden per environment
+        
+        //----------------------------------------------------------------------
+        // Environment Paths
+        //----------------------------------------------------------------------
+        STAGING_PATH = 'environments/us-east-1/staging'
+        PRODUCTION_PATH = 'environments/us-east-1/production'
 
         //----------------------------------------------------------------------
-        // AWS Configuration
+        // Module Order (dependencies first)
         //----------------------------------------------------------------------
-        AWS_REGION = 'us-east-1'
+        MODULE_ORDER = 'vpc,secrets-manager,rds,ecs,ec2-splunk'
 
         //----------------------------------------------------------------------
         // Jira Configuration
         //----------------------------------------------------------------------
-        JIRA_URL = 'https://your-company.atlassian.net'
-        JIRA_PROJECT_KEY = 'INFRA'
+        JIRA_URL = 'https://equipo-1.atlassian.net'
+        JIRA_PROJECT_KEY = 'PFM'
         JIRA_CREDS = credentials('jira-credentials')
 
         //----------------------------------------------------------------------
@@ -38,35 +54,19 @@ pipeline {
         DISCORD_WEBHOOK_STAGING = credentials('discord-webhook-staging')
         DISCORD_WEBHOOK_PRODUCTION = credentials('discord-webhook-production')
 
-        //----------------------------------------------------------------------
-        // AWS Credentials - Staging
-        //----------------------------------------------------------------------
-        AWS_CREDS_STAGING = credentials('aws-infrastructure-credentials')
-
-        //----------------------------------------------------------------------
-        // AWS Credentials - Production
-        //----------------------------------------------------------------------
-        AWS_CREDS_PRODUCTION = credentials('aws-infrastructure-credentials-prod')
-
-        //----------------------------------------------------------------------
-        // Terraform Variables - Staging
-        //----------------------------------------------------------------------
-        TF_VAR_db_username_staging = credentials('db-username-staging')
-        TF_VAR_db_password_staging = credentials('db-password-staging')
-        TF_VAR_splunk_admin_password_staging = credentials('splunk-admin-password-staging')
-        TF_VAR_app_secret_key_staging = credentials('app-secret-key-staging')
-        TF_VAR_splunk_hec_token_staging = credentials('splunk-hec-token-staging')
-        TF_VAR_docker_image_staging = credentials('docker-image-staging')
-
-        //----------------------------------------------------------------------
-        // Terraform Variables - Production
-        //----------------------------------------------------------------------
-        TF_VAR_db_username_production = credentials('db-username-production')
-        TF_VAR_db_password_production = credentials('db-password-production')
-        TF_VAR_splunk_admin_password_production = credentials('splunk-admin-password-production')
-        TF_VAR_app_secret_key_production = credentials('app-secret-key-production')
-        TF_VAR_splunk_hec_token_production = credentials('splunk-hec-token-production')
-        TF_VAR_docker_image_production = credentials('docker-image-production')
+    }
+    
+    parameters {
+        booleanParam(
+            name: 'FORCE_APPLY_STAGING',
+            defaultValue: false,
+            description: 'Force apply staging changes without checking for changes'
+        )
+        booleanParam(
+            name: 'FORCE_APPLY_PRODUCTION',
+            defaultValue: false,
+            description: 'Force apply production changes without checking for changes'
+        )
     }
 
     stages {
@@ -81,67 +81,68 @@ pipeline {
         }
 
         //----------------------------------------------------------------------
-        // Stage: Setup Tools
+        // Stage: Setup
         //----------------------------------------------------------------------
-        stage('Setup Tools') {
+        stage('Setup') {
             steps {
                 script {
-                    def helpers = load 'jenkins/shared/pipeline-helpers.groovy'
+                    // Load helper functions once for entire pipeline
+                    helpers = load 'jenkins/shared/pipeline-helpers.groovy'
+                    
+                    echo "=========================================="
+                    echo "  Infrastructure Provisioning Pipeline   "
+                    echo "=========================================="
+                    echo "Terraform Version: ${TERRAFORM_VERSION}"
+                    echo "Terragrunt Version: ${TERRAGRUNT_VERSION}"
+                    echo "TF Cloud Org: ${TF_CLOUD_ORGANIZATION}"
+                    echo "State Backend: Terraform Cloud (Remote)"
+                    echo "=========================================="
+                    
+                    // Install required tools
                     helpers.setupTools(TERRAFORM_VERSION, TERRAGRUNT_VERSION)
                 }
             }
         }
 
         //----------------------------------------------------------------------
-        // Stage: Plan & Apply Staging
+        // Stage: Staging Environment
         //----------------------------------------------------------------------
         stage('Staging') {
             environment {
                 ENVIRONMENT = 'staging'
-                ENVIRONMENTS_PATH = 'environments/us-east-1/staging'
-                // Map staging credentials to AWS and Terraform variables
-                AWS_ACCESS_KEY_ID = "${AWS_CREDS_STAGING_USR}"
-                AWS_SECRET_ACCESS_KEY = "${AWS_CREDS_STAGING_PSW}"
-                TF_VAR_db_username = "${TF_VAR_db_username_staging}"
-                TF_VAR_db_password = "${TF_VAR_db_password_staging}"
-                TF_VAR_splunk_admin_password = "${TF_VAR_splunk_admin_password_staging}"
-                TF_VAR_app_secret_key = "${TF_VAR_app_secret_key_staging}"
-                TF_VAR_splunk_hec_token = "${TF_VAR_splunk_hec_token_staging}"
-                TF_VAR_docker_image = "${TF_VAR_docker_image_staging}"
+                ENV_PATH = "${STAGING_PATH}"
                 DISCORD_WEBHOOK = "${DISCORD_WEBHOOK_STAGING}"
             }
             stages {
-                stage('Staging - Init') {
-                    steps {
-                        dir("${ENVIRONMENTS_PATH}") {
-                            sh 'terragrunt run-all init --terragrunt-non-interactive'
-                        }
-                    }
-                }
-
                 stage('Staging - Plan') {
                     steps {
-                        dir("${ENVIRONMENTS_PATH}") {
-                            script {
-                                // Run plan and capture output to detect changes
-                                def planOutput = sh(
-                                    script: 'terragrunt run-all plan --terragrunt-non-interactive -detailed-exitcode -out=tfplan 2>&1 || true',
-                                    returnStdout: true
-                                ).trim()
-                                
-                                echo planOutput
-                                
-                                // Check if there are changes to apply
-                                env.STAGING_HAS_CHANGES = planOutput.contains('Plan:') && 
-                                    (planOutput.contains('to add') || 
-                                     planOutput.contains('to change') || 
-                                     planOutput.contains('to destroy'))
-                                
-                                if (env.STAGING_HAS_CHANGES == 'true') {
-                                    echo "✅ Staging: Infrastructure changes detected"
-                                } else {
-                                    echo "ℹ️ Staging: No infrastructure changes detected"
-                                }
+                        script {
+                            env.CURRENT_STAGE = 'Staging - Plan'
+                            echo "🔍 Staging: Running Terragrunt plan..."
+                            
+                            helpers.sendDiscordNotification(
+                                DISCORD_WEBHOOK,
+                                'STARTED',
+                                ENVIRONMENT,
+                                'plan',
+                                'all',
+                                env.BUILD_URL,
+                                env.BUILD_NUMBER,
+                                "Planning infrastructure changes"
+                            )
+                            
+                            // Run terragrunt plan for all modules
+                            def hasChanges = helpers.runTerragruntPlan(
+                                ENV_PATH,
+                                MODULE_ORDER
+                            )
+                            
+                            env.STAGING_HAS_CHANGES = hasChanges ? 'true' : 'false'
+                            
+                            if (hasChanges) {
+                                echo "✅ Staging: Changes detected, ready for apply"
+                            } else {
+                                echo "ℹ️ Staging: No changes detected"
                             }
                         }
                     }
@@ -149,12 +150,15 @@ pipeline {
 
                 stage('Staging - Apply') {
                     when {
-                        expression { env.STAGING_HAS_CHANGES == 'true' }
+                        expression { 
+                            env.STAGING_HAS_CHANGES == 'true' || params.FORCE_APPLY_STAGING 
+                        }
                     }
                     steps {
                         script {
-                            // Send Discord notification for apply start
-                            def helpers = load 'jenkins/shared/pipeline-helpers.groovy'
+                            env.CURRENT_STAGE = 'Staging - Apply'
+                            echo "🚀 Staging: Running Terragrunt apply..."
+                            
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'STARTED',
@@ -163,17 +167,15 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                ''
+                                "Applying infrastructure changes"
                             )
-                        }
-                        
-                        dir("${ENVIRONMENTS_PATH}") {
-                            sh 'terragrunt run-all apply --terragrunt-non-interactive -auto-approve'
-                        }
-                        
-                        script {
-                            // Send Discord notification for apply success
-                            def helpers = load 'jenkins/shared/pipeline-helpers.groovy'
+                            
+                            // Run terragrunt apply for all modules
+                            helpers.runTerragruntApply(
+                                ENV_PATH,
+                                MODULE_ORDER
+                            )
+                            
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'SUCCESS',
@@ -182,7 +184,7 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                'Infrastructure changes applied successfully'
+                                "Infrastructure successfully deployed"
                             )
                         }
                     }
@@ -190,65 +192,70 @@ pipeline {
 
                 stage('Staging - No Changes') {
                     when {
-                        expression { env.STAGING_HAS_CHANGES != 'true' }
+                        expression { 
+                            env.STAGING_HAS_CHANGES == 'false' && !params.FORCE_APPLY_STAGING 
+                        }
                     }
                     steps {
-                        echo "ℹ️ Staging: Skipping apply - no infrastructure changes detected"
+                        script {
+                            echo "ℹ️ Staging: No infrastructure changes detected"
+                            echo "📦 All modules are up-to-date"
+                            
+                            helpers.sendDiscordNotification(
+                                DISCORD_WEBHOOK,
+                                'SUCCESS',
+                                ENVIRONMENT,
+                                'plan',
+                                'all',
+                                env.BUILD_URL,
+                                env.BUILD_NUMBER,
+                                "No infrastructure changes detected"
+                            )
+                        }
                     }
                 }
             }
         }
 
         //----------------------------------------------------------------------
-        // Stage: Plan & Apply Production
+        // Stage: Production Environment
         //----------------------------------------------------------------------
         stage('Production') {
             environment {
                 ENVIRONMENT = 'production'
-                ENVIRONMENTS_PATH = 'environments/us-east-1/production'
-                // Map production credentials to AWS and Terraform variables
-                AWS_ACCESS_KEY_ID = "${AWS_CREDS_PRODUCTION_USR}"
-                AWS_SECRET_ACCESS_KEY = "${AWS_CREDS_PRODUCTION_PSW}"
-                TF_VAR_db_username = "${TF_VAR_db_username_production}"
-                TF_VAR_db_password = "${TF_VAR_db_password_production}"
-                TF_VAR_splunk_admin_password = "${TF_VAR_splunk_admin_password_production}"
-                TF_VAR_app_secret_key = "${TF_VAR_app_secret_key_production}"
-                TF_VAR_splunk_hec_token = "${TF_VAR_splunk_hec_token_production}"
-                TF_VAR_docker_image = "${TF_VAR_docker_image_production}"
+                ENV_PATH = "${PRODUCTION_PATH}"
                 DISCORD_WEBHOOK = "${DISCORD_WEBHOOK_PRODUCTION}"
             }
             stages {
-                stage('Production - Init') {
-                    steps {
-                        dir("${ENVIRONMENTS_PATH}") {
-                            sh 'terragrunt run-all init --terragrunt-non-interactive'
-                        }
-                    }
-                }
-
                 stage('Production - Plan') {
                     steps {
-                        dir("${ENVIRONMENTS_PATH}") {
-                            script {
-                                // Run plan and capture output to detect changes
-                                def planOutput = sh(
-                                    script: 'terragrunt run-all plan --terragrunt-non-interactive -detailed-exitcode -out=tfplan 2>&1 || true',
-                                    returnStdout: true
-                                ).trim()
-                                
-                                echo planOutput
-                                
-                                // Check if there are changes to apply
-                                env.PRODUCTION_HAS_CHANGES = planOutput.contains('Plan:') && 
-                                    (planOutput.contains('to add') || 
-                                     planOutput.contains('to change') || 
-                                     planOutput.contains('to destroy'))
-                                
-                                if (env.PRODUCTION_HAS_CHANGES == 'true') {
-                                    echo "✅ Production: Infrastructure changes detected"
-                                } else {
-                                    echo "ℹ️ Production: No infrastructure changes detected"
-                                }
+                        script {
+                            env.CURRENT_STAGE = 'Production - Plan'
+                            echo "🔍 Production: Running Terragrunt plan..."
+                            
+                            helpers.sendDiscordNotification(
+                                DISCORD_WEBHOOK,
+                                'STARTED',
+                                ENVIRONMENT,
+                                'plan',
+                                'all',
+                                env.BUILD_URL,
+                                env.BUILD_NUMBER,
+                                "Planning infrastructure changes"
+                            )
+                            
+                            // Run terragrunt plan for all modules
+                            def hasChanges = helpers.runTerragruntPlan(
+                                ENV_PATH,
+                                MODULE_ORDER
+                            )
+                            
+                            env.PRODUCTION_HAS_CHANGES = hasChanges ? 'true' : 'false'
+                            
+                            if (hasChanges) {
+                                echo "✅ Production: Changes detected, requires approval"
+                            } else {
+                                echo "ℹ️ Production: No changes detected"
                             }
                         }
                     }
@@ -256,12 +263,14 @@ pipeline {
 
                 stage('Production - Approval') {
                     when {
-                        expression { env.PRODUCTION_HAS_CHANGES == 'true' }
+                        expression { 
+                            env.PRODUCTION_HAS_CHANGES == 'true' || params.FORCE_APPLY_PRODUCTION 
+                        }
                     }
                     steps {
                         script {
-                            // Send Discord notification requesting approval
-                            def helpers = load 'jenkins/shared/pipeline-helpers.groovy'
+                            env.CURRENT_STAGE = 'Production - Approval'
+                            
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'APPROVAL_REQUIRED',
@@ -270,12 +279,13 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                'Production infrastructure changes detected - awaiting approval'
+                                "Manual approval required to proceed"
                             )
                             
                             timeout(time: 60, unit: 'MINUTES') {
-                                input message: '⚠️ Production infrastructure changes detected. Review the plan and approve.',
-                                      ok: 'Apply to Production'
+                                input message: '🚦 Apply to Production?',
+                                      ok: 'Deploy to Production',
+                                      submitter: 'admin,deploy-team'
                             }
                         }
                     }
@@ -283,12 +293,15 @@ pipeline {
 
                 stage('Production - Apply') {
                     when {
-                        expression { env.PRODUCTION_HAS_CHANGES == 'true' }
+                        expression { 
+                            env.PRODUCTION_HAS_CHANGES == 'true' || params.FORCE_APPLY_PRODUCTION 
+                        }
                     }
                     steps {
                         script {
-                            // Send Discord notification for apply start
-                            def helpers = load 'jenkins/shared/pipeline-helpers.groovy'
+                            env.CURRENT_STAGE = 'Production - Apply'
+                            echo "🚀 Production: Running Terragrunt apply..."
+                            
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'STARTED',
@@ -297,17 +310,15 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                'Applying production infrastructure changes'
+                                "Applying infrastructure changes"
                             )
-                        }
-                        
-                        dir("${ENVIRONMENTS_PATH}") {
-                            sh 'terragrunt run-all apply --terragrunt-non-interactive -auto-approve'
-                        }
-                        
-                        script {
-                            // Send Discord notification for apply success
-                            def helpers = load 'jenkins/shared/pipeline-helpers.groovy'
+                            
+                            // Run terragrunt apply for all modules
+                            helpers.runTerragruntApply(
+                                ENV_PATH,
+                                MODULE_ORDER
+                            )
+                            
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'SUCCESS',
@@ -316,7 +327,7 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                'Production infrastructure changes applied successfully'
+                                "Infrastructure successfully deployed"
                             )
                         }
                     }
@@ -324,98 +335,103 @@ pipeline {
 
                 stage('Production - No Changes') {
                     when {
-                        expression { env.PRODUCTION_HAS_CHANGES != 'true' }
+                        expression { 
+                            env.PRODUCTION_HAS_CHANGES == 'false' && !params.FORCE_APPLY_PRODUCTION 
+                        }
                     }
                     steps {
-                        echo "ℹ️ Production: Skipping apply - no infrastructure changes detected"
+                        script {
+                            echo "ℹ️ Production: No infrastructure changes detected"
+                            echo "📦 All modules are up-to-date"
+                            
+                            helpers.sendDiscordNotification(
+                                DISCORD_WEBHOOK,
+                                'SUCCESS',
+                                ENVIRONMENT,
+                                'plan',
+                                'all',
+                                env.BUILD_URL,
+                                env.BUILD_NUMBER,
+                                "No infrastructure changes detected"
+                            )
+                        }
                     }
-                }
-            }
-        }
-
-        //----------------------------------------------------------------------
-        // Stage: Summary
-        //----------------------------------------------------------------------
-        stage('Summary') {
-            steps {
-                script {
-                    echo "======================================"
-                    echo "           Pipeline Summary           "
-                    echo "======================================"
-                    echo "Staging changes detected:    ${env.STAGING_HAS_CHANGES ?: 'false'}"
-                    echo "Production changes detected: ${env.PRODUCTION_HAS_CHANGES ?: 'false'}"
-                    echo "======================================"
                 }
             }
         }
     }
 
+    //--------------------------------------------------------------------------
+    // Post Actions
+    //--------------------------------------------------------------------------
     post {
-        failure {
-            script {
-                echo "❌ Pipeline FAILED"
-                
-                def errorMessage = currentBuild.rawBuild?.getLog(100)?.join('\n') ?: 'Error details not available'
-                def failedEnvironment = env.PRODUCTION_HAS_CHANGES == 'true' ? 'production' : 'staging'
-                def discordWebhook = failedEnvironment == 'production' ? DISCORD_WEBHOOK_PRODUCTION : DISCORD_WEBHOOK_STAGING
-                
-                // Send Discord notification
-                def helpers = load 'jenkins/shared/pipeline-helpers.groovy'
-                helpers.sendDiscordNotification(
-                    discordWebhook,
-                    'FAILURE',
-                    failedEnvironment,
-                    'apply',
-                    'all',
-                    env.BUILD_URL,
-                    env.BUILD_NUMBER,
-                    'A Jira ticket has been created for this failure'
-                )
-                
-                // Create Jira ticket for the failure
-                try {
-                    def ticketKey = helpers.createJiraTicket(
-                        JIRA_URL,
-                        JIRA_CREDS_USR,
-                        JIRA_CREDS_PSW,
-                        JIRA_PROJECT_KEY,
-                        failedEnvironment,
-                        'apply',
-                        'all',
-                        env.BUILD_URL,
-                        errorMessage.take(1000)
-                    )
-                    echo "Created Jira ticket: ${ticketKey}"
-                } catch (Exception e) {
-                    echo "Failed to create Jira ticket: ${e.message}"
-                }
-            }
-        }
-
         success {
             script {
-                echo "✅ Pipeline completed successfully"
+                echo "✅ Pipeline completed successfully!"
+            }
+        }
+        
+        failure {
+            script {
+                // Get error message (truncated to 2000 chars for Jira)
+                def errorMessage = ""
+                try {
+                    def logs = currentBuild.rawBuild?.getLog(500)
+                    if (logs) {
+                        errorMessage = logs.join('\n')
+                        if (errorMessage.length() > 2000) {
+                            errorMessage = errorMessage.substring(0, 2000) + "\n...[truncated]"
+                        }
+                    }
+                } catch (Exception e) {
+                    errorMessage = "Could not retrieve logs: ${e.message}"
+                }
                 
-                // Only send summary notification if there were changes applied
-                if (env.STAGING_HAS_CHANGES == 'true' || env.PRODUCTION_HAS_CHANGES == 'true') {
-                    def changesApplied = []
-                    if (env.STAGING_HAS_CHANGES == 'true') changesApplied.add('Staging')
-                    if (env.PRODUCTION_HAS_CHANGES == 'true') changesApplied.add('Production')
-                    
-                    echo "Infrastructure changes applied to: ${changesApplied.join(', ')}"
-                } else {
-                    echo "No infrastructure changes were applied - all environments up to date"
+                // Determine which environment failed
+                def failedEnv = env.CURRENT_STAGE ?: 'Unknown'
+                def webhook = failedEnv.toLowerCase().contains('production') ? 
+                             env.DISCORD_WEBHOOK_PRODUCTION : env.DISCORD_WEBHOOK_STAGING
+                def environment = failedEnv.toLowerCase().contains('production') ? 
+                                 'production' : 'staging'
+                
+                // Send Discord notification
+                helpers.sendDiscordNotification(
+                    webhook,
+                    'FAILURE',
+                    environment,
+                    'pipeline',
+                    failedEnv,
+                    env.BUILD_URL,
+                    env.BUILD_NUMBER,
+                    "Pipeline failed at stage: ${failedEnv}"
+                )
+                
+                // Create Jira ticket
+                try {
+                    def ticketKey = helpers.createJiraTicket(
+                        env.JIRA_URL,
+                        env.JIRA_CREDS_USR,
+                        env.JIRA_CREDS_PSW,
+                        env.JIRA_PROJECT_KEY,
+                        environment,
+                        'pipeline',
+                        failedEnv,
+                        env.BUILD_URL,
+                        errorMessage
+                    )
+                    echo "📋 Created Jira ticket: ${ticketKey}"
+                } catch (Exception e) {
+                    echo "⚠️ Failed to create Jira ticket: ${e.message}"
                 }
             }
         }
-
+        
         always {
-            // Clean up workspace
-            cleanWs(
-                cleanWhenSuccess: true,
-                cleanWhenFailure: false,
-                deleteDirs: true
-            )
+            script {
+                echo "======================================"
+                echo "  Pipeline Execution Complete        "
+                echo "======================================"
+            }
         }
     }
 }
