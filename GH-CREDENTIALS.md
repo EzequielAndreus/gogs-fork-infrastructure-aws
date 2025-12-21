@@ -25,6 +25,8 @@ The GitHub Actions CI pipeline performs:
 - ✅ Terraform plan generation (on PRs)
 - ✅ Documentation checks
 
+**Backend:** Terraform Cloud is used to track infrastructure state instead of S3/DynamoDB.
+
 **Pipeline Trigger:** Push to `main` or `feature/**` branches, and Pull Requests to `main`
 
 ---
@@ -34,6 +36,8 @@ The GitHub Actions CI pipeline performs:
 ### Required IAM Permissions
 
 Create an IAM user or role with the following permissions for CI validation and planning:
+
+**Note:** Since Terraform Cloud is used as the backend, S3 and DynamoDB permissions for state management are not required.
 
 #### Option 1: Managed Policies (Broader permissions)
 
@@ -57,10 +61,6 @@ Create an IAM user or role with the following permissions for CI validation and 
         "iam:List*",
         "kms:Describe*",
         "kms:List*",
-        "s3:GetObject",
-        "s3:ListBucket",
-        "dynamodb:GetItem",
-        "dynamodb:DescribeTable",
         "autoscaling:Describe*",
         "application-autoscaling:Describe*"
       ],
@@ -72,7 +72,7 @@ Create an IAM user or role with the following permissions for CI validation and 
 
 #### Option 2: Custom Policy (Recommended - Least Privilege)
 
-Create a policy for CI validation (read-only + Terraform state access):
+Create a policy for CI validation (read-only infrastructure access):
 
 <details>
 <summary>Click to expand custom IAM policy</summary>
@@ -114,31 +114,6 @@ Create a policy for CI validation (read-only + Terraform state access):
         "application-autoscaling:Describe*"
       ],
       "Resource": "*"
-    },
-    {
-      "Sid": "TerraformStateReadWrite",
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:ListBucket",
-        "s3:GetBucketVersioning"
-      ],
-      "Resource": [
-        "arn:aws:s3:::gogs-app-terraform-state-*",
-        "arn:aws:s3:::gogs-app-terraform-state-*/*"
-      ]
-    },
-    {
-      "Sid": "TerraformStateLocking",
-      "Effect": "Allow",
-      "Action": [
-        "dynamodb:GetItem",
-        "dynamodb:PutItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:DescribeTable"
-      ],
-      "Resource": "arn:aws:dynamodb:*:*:table/gogs-app-terraform-locks"
     }
   ]
 }
@@ -176,8 +151,7 @@ Navigate to your repository → **Settings** → **Secrets and variables** → *
 ### Required Secrets
 
 | Secret Name | Description | Used In | Example |
-|-------------|-------------|---------|---------|
-| `AWS_ACCESS_KEY_ID` | AWS access key for CI | All validation/plan jobs | `AKIAIOSFODNN7EXAMPLE` |
+|-------------|-------------|---------|---------|| `TF_API_TOKEN` | Terraform Cloud API token for backend authentication | All Terraform/Terragrunt jobs | `xxxxxxxxxx.atlasv1.zzzzzzzzzzzzz...` || `AWS_ACCESS_KEY_ID` | AWS access key for CI | All validation/plan jobs | `AKIAIOSFODNN7EXAMPLE` |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key for CI | All validation/plan jobs | `wJalrXUtnFEMI/...` |
 | `DB_USERNAME` | RDS database master username | Terragrunt plan | `admin` |
 | `DB_PASSWORD` | RDS database master password | Terragrunt plan | `MySecurePassword123!` |
@@ -208,6 +182,9 @@ Navigate to your repository → **Settings** → **Secrets and variables** → *
 # Login to GitHub
 gh auth login
 
+# Set Terraform Cloud token (get from https://app.terraform.io/app/settings/tokens)
+gh secret set TF_API_TOKEN --body "xxxxxxxxxx.atlasv1.zzzzzzzzzzzzz..."
+
 # Set CI secrets
 gh secret set AWS_ACCESS_KEY_ID --body "AKIAIOSFODNN7EXAMPLE"
 gh secret set AWS_SECRET_ACCESS_KEY --body "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
@@ -224,11 +201,15 @@ gh secret set DOCKER_IMAGE --body "username/app:latest"
 1. Navigate to repository → **Settings**
 2. Click **Secrets and variables** → **Actions**
 3. Click **New repository secret**
-4. Enter:
+4. **First, add Terraform Cloud token:**
+   - **Name**: `TF_API_TOKEN`
+   - **Secret**: Your Terraform Cloud API token (from https://app.terraform.io/app/settings/tokens)
+5. Click **Add secret**
+6. **Then, add AWS credentials:**
    - **Name**: `AWS_ACCESS_KEY_ID`
    - **Secret**: Your AWS access key
-5. Click **Add secret**
-6. Repeat for all other secrets
+7. Click **Add secret**
+8. Repeat for all other secrets
 
 ---
 
@@ -309,6 +290,7 @@ Example `protection.json`:
 
 | Secret | Rotation Frequency | Impact |
 |--------|-------------------|--------|
+| Terraform Cloud API Token | Every 90 days | Update in GitHub secrets |
 | AWS Access Keys | Every 90 days | Update in GitHub secrets |
 | Database Password | Every 90 days | Update in GitHub secrets + Trigger redeployment |
 | Splunk Password | Every 90 days | Update in GitHub secrets + Trigger redeployment |
@@ -339,6 +321,21 @@ aws iam delete-access-key \
   --access-key-id OLD_ACCESS_KEY_ID
 ```
 
+### Rotating Terraform Cloud Token
+
+```bash
+# 1. Generate new token in Terraform Cloud
+#    Visit: https://app.terraform.io/app/settings/tokens
+#    Click "Create an API token"
+
+# 2. Update GitHub secret
+gh secret set TF_API_TOKEN --body "NEW_TERRAFORM_CLOUD_TOKEN"
+
+# 3. Test the new token (trigger a workflow)
+
+# 4. Revoke old token in Terraform Cloud UI
+```
+
 ### Rotating Other Secrets
 
 1. **Generate new secret value**
@@ -359,28 +356,35 @@ aws iam delete-access-key \
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | "Authentication failed" | Invalid AWS credentials | Verify `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` |
-| "Access Denied" during plan | Missing IAM permissions | Check IAM policy includes `Describe*` and state access |
+| "Access Denied" during plan | Missing IAM permissions | Check IAM policy includes `Describe*` permissions |
 | "Secret not found" | Typo in secret name | Verify secret name matches workflow exactly |
-| "State locking errors" | Missing DynamoDB permissions | Add `dynamodb:GetItem`, `PutItem`, `DeleteItem` |
-| "Terraform init failed" | S3 state bucket access | Verify S3 bucket permissions in IAM policy |
+| "Terraform init failed" | Missing TF_API_TOKEN or invalid Terraform Cloud workspace | Verify `TF_API_TOKEN` is set and workspace exists in Terraform Cloud |
 | Plan hangs on PR | Secret value contains special chars | Properly escape or quote secret values |
 
 ### Verifying Credentials Locally
 
 ```bash
-# Set credentials
+# Set AWS credentials
 export AWS_ACCESS_KEY_ID="your-access-key"
 export AWS_SECRET_ACCESS_KEY="your-secret-key"
 export AWS_REGION="us-east-1"
 
+# Set Terraform Cloud token
+export TF_TOKEN_app_terraform_io="your-terraform-cloud-token"
+# OR create ~/.terraform.d/credentials.tfrc.json with:
+# {
+#   "credentials": {
+#     "app.terraform.io": {
+#       "token": "your-terraform-cloud-token"
+#     }
+#   }
+# }
+
 # Test AWS credentials
 aws sts get-caller-identity
 
-# Test S3 state bucket access
-aws s3 ls s3://gogs-app-terraform-state-YOUR_ACCOUNT_ID/
-
-# Test DynamoDB state lock table
-aws dynamodb describe-table --table-name gogs-app-terraform-locks
+# Test Terraform Cloud authentication
+terraform login
 
 # Test Terragrunt validate locally
 cd environments/us-east-1/staging
@@ -419,11 +423,11 @@ aws iam simulate-principal-policy \
   --action-names ec2:DescribeVpcs \
   --resource-arns "*"
 
-# Simulate S3 state access
+# Simulate RDS describe
 aws iam simulate-principal-policy \
   --policy-source-arn arn:aws:iam::ACCOUNT:user/github-actions-ci \
-  --action-names s3:ListBucket s3:GetObject \
-  --resource-arns "arn:aws:s3:::gogs-app-terraform-state-*"
+  --action-names rds:DescribeDBInstances \
+  --resource-arns "*"
 ```
 
 ---
