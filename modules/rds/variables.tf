@@ -8,7 +8,7 @@ variable "project_name" {
 }
 
 variable "environment" {
-  description = "Environment name (staging, production)"
+  description = "Environment name (e.g., dev, staging, production). Note: 'production' has special handling for deletion_protection and skip_final_snapshot."
   type        = string
 }
 

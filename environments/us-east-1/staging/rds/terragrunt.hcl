@@ -40,8 +40,15 @@ inputs = {
   vpc_id             = dependency.vpc.outputs.vpc_id
   private_subnet_ids = dependency.vpc.outputs.private_subnet_ids
   
-  # Allow access from ECS security group (will be configured after ECS is deployed)
-  allowed_security_groups = []  # Will be updated via data source in ECS module
+  # NOTE: Due to a circular dependency between RDS and ECS, allowed_security_groups is left empty here.
+  # The ECS module will create a security group rule allowing ECS tasks to connect to RDS.
+  # To allow ECS to connect to RDS:
+  # 1. Deploy RDS first with empty allowed_security_groups
+  # 2. Deploy ECS (which depends on RDS outputs)
+  # 3. ECS module handles the security group rule creation
+  # Alternatively: Use a separate Terragrunt configuration (e.g., rds-ecs-sg-rule) to add the ECS 
+  # security group to the RDS security group after both resources are created.
+  allowed_security_groups = []
   
   # Database configuration
   db_engine                 = "postgres"

@@ -60,7 +60,8 @@ resource "aws_iam_role_policy" "ecs_secrets_policy" {
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = var.secrets_manager_arns
+        # Prevent wildcard access - use restrictive ARN if secrets_manager_arns is empty
+        Resource = length(var.secrets_manager_arns) > 0 ? var.secrets_manager_arns : ["arn:aws:secretsmanager:*:*:secret:DO_NOT_ALLOW"]
       }
     ]
   })
@@ -254,6 +255,37 @@ resource "aws_lb_listener" "http" {
   port              = 80
   protocol          = "HTTP"
 
+  # SECURITY WARNING: The ALB is exposed publicly on port 80 with only an HTTP listener.
+  # This means credentials or sensitive data can be intercepted by network attackers.
+  # 
+  # RECOMMENDATIONS:
+  # 1. Configure an HTTPS listener using ACM certificates (see commented example below)
+  # 2. Redirect HTTP to HTTPS for secure communication
+  # 3. Update this listener to redirect instead of forward
+  #
+  # Example HTTPS redirect configuration:
+  # default_action {
+  #   type = "redirect"
+  #   redirect {
+  #     port        = "443"
+  #     protocol    = "HTTPS"
+  #     status_code = "HTTP_301"
+  #   }
+  # }
+  #
+  # Example HTTPS listener (requires ACM certificate):
+  # resource "aws_lb_listener" "https" {
+  #   load_balancer_arn = aws_lb.main.arn
+  #   port              = 443
+  #   protocol          = "HTTPS"
+  #   ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
+  #   certificate_arn   = var.acm_certificate_arn
+  #   default_action {
+  #     type             = "forward"
+  #     target_group_arn = aws_lb_target_group.main.arn
+  #   }
+  # }
+  
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.main.arn

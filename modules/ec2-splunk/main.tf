@@ -195,6 +195,18 @@ resource "aws_instance" "splunk" {
     delete_on_termination = true
   }
 
+  # SECURITY WARNING: The user_data script has several security concerns:
+  # 1. PASSWORD EXPOSURE: The splunk_admin_password is embedded in plaintext in user_data,
+  #    which is stored in EC2 instance metadata and potentially in cloud-init logs.
+  #    RECOMMENDATION: Fetch the password from AWS Secrets Manager at runtime instead.
+  # 2. DOWNLOAD INTEGRITY: Splunk is downloaded from an external URL without checksum or 
+  #    signature verification. A compromise of the download source could allow RCE.
+  #    RECOMMENDATION: Add GPG signature verification or use a trusted package repository.
+  # 3. EBS VOLUME MOUNTING: The data volume attachment uses /dev/sdf which may be mapped
+  #    differently on newer instance types. Document expected device name mapping.
+  #
+  # TODO: Refactor to use Secrets Manager for runtime password retrieval
+  # TODO: Add integrity verification for Splunk downloads (checksum or GPG signature)
   user_data = var.user_data != null ? var.user_data : <<-EOF
     #!/bin/bash
     set -e
@@ -242,6 +254,9 @@ resource "aws_instance" "splunk" {
 
 #------------------------------------------------------------------------------
 # Attach Data Volume
+# NOTE: Device name /dev/sdf may be mapped differently on newer instance types.
+# On nitro-based instances, this typically appears as /dev/nvme1n1.
+# Check instance metadata or use lsblk to verify the actual device name.
 #------------------------------------------------------------------------------
 
 resource "aws_volume_attachment" "splunk_data" {

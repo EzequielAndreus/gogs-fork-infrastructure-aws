@@ -62,8 +62,8 @@ inputs = {
   public_subnet_ids  = dependency.vpc.outputs.public_subnet_ids
   private_subnet_ids = dependency.vpc.outputs.private_subnet_ids
   
-  # Docker image from DockerHub - Replace with your actual image
-  docker_image   = get_env("TF_VAR_docker_image", "your-dockerhub-username/your-app:latest")
+  # Docker image from DockerHub - Must be set via environment variable
+  docker_image   = get_env("TF_VAR_docker_image")
   container_name = "gogs-app"
   container_port = 8080
   

@@ -72,16 +72,16 @@ inputs = {
   allowed_cidr_blocks    = [get_env("TF_VAR_allowed_cidr", "0.0.0.0/0")]  # Restrict in production!
   ecs_security_group_ids = [dependency.ecs.outputs.ecs_security_group_id]
   
-  # SSH access (optional - for debugging)
+  # SSH access - must be explicitly set for security
   enable_ssh      = true
-  ssh_cidr_blocks = [get_env("TF_VAR_ssh_cidr", "0.0.0.0/0")]  # Restrict to your IP!
+  ssh_cidr_blocks = get_env("TF_VAR_ssh_cidr", null) != null ? [get_env("TF_VAR_ssh_cidr")] : []  # Must be set explicitly - do not use 0.0.0.0/0!
   ssh_public_key  = get_env("TF_VAR_ssh_public_key", null)
   
   # Secrets Manager access
   secrets_manager_arns = dependency.secrets_manager.outputs.all_secret_arns
   
-  # Splunk configuration
-  splunk_admin_password = get_env("TF_VAR_splunk_admin_password", "CHANGE_ME_IN_CI")
+  # Splunk configuration - must be set in environment; no insecure default allowed
+  splunk_admin_password = get_env("TF_VAR_splunk_admin_password")
   
   # Create Elastic IP for stable access
   create_elastic_ip = true

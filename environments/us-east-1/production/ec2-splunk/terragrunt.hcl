@@ -60,8 +60,8 @@ inputs = {
   # Instance configuration - larger for production
   instance_type = "t3.large"
   
-  # AMI - Amazon Linux 2 (update with latest AMI ID for your region)
-  ami_id = get_env("TF_VAR_splunk_ami_id", "ami-0c7217cdde317cfec")  # Amazon Linux 2 in us-east-1
+  # AMI - Dynamically fetch latest Amazon Linux 2 AMI
+  ami_id = get_env("TF_VAR_splunk_ami_id", run_cmd("aws", "ec2", "describe-images", "--owners", "amazon", "--filters", "Name=name,Values=amzn2-ami-hvm-*-x86_64-gp2", "Name=state,Values=available", "--query", "Images | sort_by(@, &CreationDate)[-1].ImageId", "--output", "text", "--region", local.region_vars.locals.aws_region))
   
   # Volume configuration - larger for production
   root_volume_size = 50
@@ -72,16 +72,16 @@ inputs = {
   allowed_cidr_blocks    = [get_env("TF_VAR_allowed_cidr", "10.0.0.0/8")]  # Internal network only
   ecs_security_group_ids = [dependency.ecs.outputs.ecs_security_group_id]
   
-  # SSH access - more restricted for production
+  # SSH access - must be explicitly set for security
   enable_ssh      = true
-  ssh_cidr_blocks = [get_env("TF_VAR_ssh_cidr", "10.0.0.0/8")]  # Internal network only
+  ssh_cidr_blocks = get_env("TF_VAR_ssh_cidr", null) != null ? [get_env("TF_VAR_ssh_cidr")] : []  # Must be set explicitly for security
   ssh_public_key  = get_env("TF_VAR_ssh_public_key", null)
   
   # Secrets Manager access
   secrets_manager_arns = dependency.secrets_manager.outputs.all_secret_arns
   
-  # Splunk configuration
-  splunk_admin_password = get_env("TF_VAR_splunk_admin_password", "CHANGE_ME_IN_CI")
+  # Splunk configuration - must be set in environment; no insecure default allowed
+  splunk_admin_password = get_env("TF_VAR_splunk_admin_password")
   
   # Create Elastic IP for stable access
   create_elastic_ip = true

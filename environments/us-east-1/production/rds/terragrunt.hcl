@@ -40,8 +40,13 @@ inputs = {
   vpc_id             = dependency.vpc.outputs.vpc_id
   private_subnet_ids = dependency.vpc.outputs.private_subnet_ids
   
-  # Allow access from ECS security group
-  allowed_security_groups = []  # Will be updated via data source in ECS module
+  # NOTE: Due to a circular dependency between RDS and ECS, allowed_security_groups must be configured carefully:
+  # 1. For initial deployment: Use a bootstrap placeholder security group ID (e.g., "sg-bootstrap12345")
+  # 2. After ECS is created: Update this value with the actual ECS security group ID
+  # 3. Alternatively: Use a separate Terragrunt configuration to add the ECS security group rule after both resources exist
+  # TODO: Replace "sg-bootstrap12345" with the actual ECS security group ID after initial deployment.
+  # This breaks the circular dependency for the first apply. See documentation for details.
+  allowed_security_groups = ["sg-bootstrap12345"]
   
   # Database configuration - larger for production
   db_engine                 = "postgres"

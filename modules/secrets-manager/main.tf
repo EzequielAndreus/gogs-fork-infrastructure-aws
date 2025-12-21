@@ -10,7 +10,7 @@ resource "aws_secretsmanager_secret" "database" {
   name                    = "${var.project_name}/${var.environment}/database"
   description             = "Database credentials for ${var.project_name} ${var.environment}"
   recovery_window_in_days = var.recovery_window_in_days
-  kms_key_id              = var.kms_key_id
+  kms_key_id              = var.create_kms_key ? aws_kms_key.secrets[0].id : var.kms_key_id
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-database-secret"
@@ -36,7 +36,7 @@ resource "aws_secretsmanager_secret" "application" {
   name                    = "${var.project_name}/${var.environment}/application"
   description             = "Application secrets for ${var.project_name} ${var.environment}"
   recovery_window_in_days = var.recovery_window_in_days
-  kms_key_id              = var.kms_key_id
+  kms_key_id              = var.create_kms_key ? aws_kms_key.secrets[0].id : var.kms_key_id
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-application-secret"
@@ -57,7 +57,7 @@ resource "aws_secretsmanager_secret" "splunk" {
   name                    = "${var.project_name}/${var.environment}/splunk"
   description             = "Splunk credentials for ${var.project_name} ${var.environment}"
   recovery_window_in_days = var.recovery_window_in_days
-  kms_key_id              = var.kms_key_id
+  kms_key_id              = var.create_kms_key ? aws_kms_key.secrets[0].id : var.kms_key_id
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-splunk-secret"
@@ -82,7 +82,7 @@ resource "aws_secretsmanager_secret" "dockerhub" {
   name                    = "${var.project_name}/${var.environment}/dockerhub"
   description             = "DockerHub credentials for ${var.project_name} ${var.environment}"
   recovery_window_in_days = var.recovery_window_in_days
-  kms_key_id              = var.kms_key_id
+  kms_key_id              = var.create_kms_key ? aws_kms_key.secrets[0].id : var.kms_key_id
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-dockerhub-secret"
@@ -108,7 +108,7 @@ resource "aws_secretsmanager_secret" "custom" {
   name                    = "${var.project_name}/${var.environment}/${each.key}"
   description             = each.value.description
   recovery_window_in_days = var.recovery_window_in_days
-  kms_key_id              = var.kms_key_id
+  kms_key_id              = var.create_kms_key ? aws_kms_key.secrets[0].id : var.kms_key_id
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-${each.key}-secret"
