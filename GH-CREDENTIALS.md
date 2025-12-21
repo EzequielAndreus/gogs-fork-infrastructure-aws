@@ -4,13 +4,13 @@ This document outlines all credentials and secrets required for the **Continuous
 
 ## 📋 Table of Contents
 
-1. [Overview](#overview)
-2. [AWS Credentials](#aws-credentials)
-3. [GitHub Actions Secrets](#github-actions-secrets)
-4. [Terraform Variables](#terraform-variables)
-5. [Security Best Practices](#security-best-practices)
-6. [Secret Rotation](#secret-rotation)
-7. [Troubleshooting](#troubleshooting)
+1. [Overview](#-overview)
+2. [AWS Credentials](#-aws-credentials)
+3. [GitHub Actions Secrets](#-github-actions-secrets)
+4. [Terraform Variables](#-terraform-variables)
+5. [Security Best Practices](#️-security-best-practices)
+6. [Secret Rotation](#-secret-rotation)
+7. [Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -163,7 +163,7 @@ Navigate to your repository → **Settings** → **Secrets and variables** → *
 ### Secrets Usage by Job
 
 | Job | Secrets Used |
-|-----|--------------|
+| ----- | ------------ |
 | `terraform-fmt` | None |
 | `terraform-validate` | None |
 | `tflint` | None |
@@ -182,7 +182,7 @@ Navigate to your repository → **Settings** → **Secrets and variables** → *
 # Login to GitHub
 gh auth login
 
-# Set Terraform Cloud token (get from https://app.terraform.io/app/settings/tokens)
+# Set Terraform Cloud token (get from <https://app.terraform.io/app/settings/tokens>)
 gh secret set TF_API_TOKEN --body "xxxxxxxxxx.atlasv1.zzzzzzzzzzzzz..."
 
 # Set CI secrets
@@ -218,7 +218,7 @@ gh secret set DOCKER_IMAGE --body "username/app:latest"
 These environment variables are used during Terragrunt validation and planning:
 
 | Variable | Description | Required | Used In |
-|----------|-------------|----------|---------|
+| ---------- | ------------- | ---------- | --------- |
 | `TF_VAR_db_username` | Database master username | ✅ | Plan job |
 | `TF_VAR_db_password` | Database master password | ✅ | Plan job |
 | `TF_VAR_splunk_admin_password` | Splunk admin password | ✅ | Plan job |
@@ -281,7 +281,7 @@ Example `protection.json`:
 ### Password Requirements
 
 | Secret | Minimum Length | Requirements |
-|--------|---------------|--------------|
+| -------- | --------------- | -------------- |
 | `DB_PASSWORD` | 16 characters | Uppercase, lowercase, numbers, special chars |
 | `SPLUNK_ADMIN_PASSWORD` | 12 characters | Uppercase, lowercase, numbers |
 | `APP_SECRET_KEY` | 32 characters | Random alphanumeric |
@@ -289,7 +289,7 @@ Example `protection.json`:
 ### Rotation Schedule
 
 | Secret | Rotation Frequency | Impact |
-|--------|-------------------|--------|
+| -------- | ------------------- | -------- |
 | Terraform Cloud API Token | Every 90 days | Update in GitHub secrets |
 | AWS Access Keys | Every 90 days | Update in GitHub secrets |
 | Database Password | Every 90 days | Update in GitHub secrets + Trigger redeployment |
@@ -354,7 +354,7 @@ gh secret set TF_API_TOKEN --body "NEW_TERRAFORM_CLOUD_TOKEN"
 ### Common Issues
 
 | Issue | Cause | Solution |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | "Authentication failed" | Invalid AWS credentials | Verify `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` |
 | "Access Denied" during plan | Missing IAM permissions | Check IAM policy includes `Describe*` permissions |
 | "Secret not found" | Typo in secret name | Verify secret name matches workflow exactly |

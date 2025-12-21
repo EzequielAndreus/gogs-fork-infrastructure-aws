@@ -40,14 +40,4 @@ jobs:
           VALIDATE_TERRAFORM_TERRASCAN: true
           VALIDATE_TERRAFORM_TFLINT: true
           VALIDATE_TERRAGRUNT: true
-
-      - name: Upload linter logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: linter-logs
-          path: |
-            /tmp/lint/
-            super-linter.log
-          retention-days: 30
           
