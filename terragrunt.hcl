@@ -3,6 +3,17 @@
 # This file contains common configurations shared across all environments
 #------------------------------------------------------------------------------
 
+# Terraform Cloud Configuration (for CLI-driven runs)
+terraform {
+  cloud {
+    organization = "gogs-state"
+
+    workspaces {
+      name = "gogs-iac"
+    }
+  }
+}
+
 # Configure Terragrunt to store state in Terraform Cloud
 # Requires TF_CLOUD_ORGANIZATION and TF_TOKEN_app_terraform_io to be set
 remote_state {
