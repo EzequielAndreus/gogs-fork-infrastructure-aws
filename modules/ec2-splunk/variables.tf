@@ -56,6 +56,18 @@ variable "data_volume_type" {
   default     = "gp3"
 }
 
+variable "data_volume_iops" {
+  description = "IOPS for io1 or io2 volume type"
+  type        = number
+  default     = null
+}
+
+variable "data_volume_throughput" {
+  description = "Throughput for gp3 volume type in MB/s"
+  type        = number
+  default     = null
+}
+
 variable "kms_key_id" {
   description = "KMS key ID for EBS encryption"
   type        = string

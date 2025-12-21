@@ -154,5 +154,5 @@ variable "tags" {
 variable "alb_ingress_cidr_blocks" {
   description = "CIDR blocks allowed to access the ALB (restrict to specific IPs in production)"
   type        = list(string)
-  default     = ["0.0.0.0/0"]  # Should be restricted in production
+  default     = ["0.0.0.0/0"] # Should be restricted in production
 }

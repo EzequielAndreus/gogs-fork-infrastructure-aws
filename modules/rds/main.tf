@@ -38,8 +38,8 @@ resource "aws_security_group" "rds" {
 
   ingress {
     description     = "Database access from ECS"
-    from_port       = var.db_port
-    to_port         = var.db_port
+    from_port       = var.port
+    to_port         = var.port
     protocol        = "tcp"
     security_groups = var.allowed_security_groups
   }
@@ -113,14 +113,14 @@ resource "aws_db_instance" "main" {
   parameter_group_name   = aws_db_parameter_group.main.name
 
   # Backup configuration
-  backup_retention_period      = var.backup_retention_period
-  backup_window                = var.backup_window
-  maintenance_window           = var.maintenance_window
-  auto_minor_version_upgrade   = var.auto_minor_version_upgrade
-  final_snapshot_identifier    = "${var.project_name}-${var.environment}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
-  skip_final_snapshot          = var.skip_final_snapshot
-  copy_tags_to_snapshot        = true
-  deletion_protection          = var.deletion_protection
+  backup_retention_period    = var.backup_retention_period
+  backup_window              = var.backup_window
+  maintenance_window         = var.maintenance_window
+  auto_minor_version_upgrade = var.auto_minor_version_upgrade
+  final_snapshot_identifier  = "${var.project_name}-${var.environment}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  skip_final_snapshot        = var.skip_final_snapshot
+  copy_tags_to_snapshot      = true
+  deletion_protection        = var.deletion_protection
 
   # Enhanced Monitoring
   monitoring_interval = var.monitoring_interval

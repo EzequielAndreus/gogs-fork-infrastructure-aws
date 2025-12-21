@@ -14,6 +14,38 @@ terraform {
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
+# Locals
+#------------------------------------------------------------------------------
+
+locals {
+  default_user_data = <<-EOF
+    #!/bin/bash
+    # Minimal bootstrap script - actual Splunk configuration handled by Ansible
+    yum update -y
+    yum install -y python3
+  EOF
+}
+
+#------------------------------------------------------------------------------
+# Data Sources
+#------------------------------------------------------------------------------
+
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+#------------------------------------------------------------------------------
 # IAM Role for EC2 Instance
 #------------------------------------------------------------------------------
 
@@ -202,9 +234,9 @@ resource "aws_instance" "splunk" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [aws_security_group.splunk.id]
   iam_instance_profile   = aws_iam_instance_profile.splunk.name
-  key_name               = var.key_name
+  key_name               = var.ssh_public_key != null ? aws_key_pair.splunk[0].key_name : null
   user_data              = var.user_data != null ? var.user_data : local.default_user_data
-  monitoring             = true  # Enable detailed monitoring
+  monitoring             = true # Enable detailed monitoring
 
   root_block_device {
     volume_type           = "gp3"
