@@ -1,3 +1,14 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 #------------------------------------------------------------------------------
 # EC2 Splunk Module - Monitoring Server
 #------------------------------------------------------------------------------
@@ -168,12 +179,17 @@ resource "aws_ebs_volume" "splunk_data" {
   availability_zone = var.availability_zone
   size              = var.data_volume_size
   type              = var.data_volume_type
+  iops              = var.data_volume_type == "io1" || var.data_volume_type == "io2" ? var.data_volume_iops : null
+  throughput        = var.data_volume_type == "gp3" ? var.data_volume_throughput : null
   encrypted         = true
   kms_key_id        = var.kms_key_id
 
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.environment}-splunk-data"
-  })
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.project_name}-${var.environment}-splunk-data"
+    }
+  )
 }
 
 #------------------------------------------------------------------------------
@@ -181,64 +197,32 @@ resource "aws_ebs_volume" "splunk_data" {
 #------------------------------------------------------------------------------
 
 resource "aws_instance" "splunk" {
-  ami                    = var.ami_id
+  ami                    = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux.id
   instance_type          = var.instance_type
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [aws_security_group.splunk.id]
   iam_instance_profile   = aws_iam_instance_profile.splunk.name
-  key_name               = var.ssh_public_key != null ? aws_key_pair.splunk[0].key_name : null
+  key_name               = var.key_name
+  user_data              = var.user_data != null ? var.user_data : local.default_user_data
+  monitoring             = true  # Enable detailed monitoring
 
   root_block_device {
-    volume_size           = var.root_volume_size
     volume_type           = "gp3"
-    encrypted             = true
+    volume_size           = 20
     delete_on_termination = true
+    encrypted             = true
+    kms_key_id            = var.kms_key_id
   }
 
-  # IMPORTANT: This instance is provisioned for Splunk but does NOT install Splunk.
-  # Splunk installation and configuration should be managed by Ansible from your
-  # configuration management repository.
-  #
-  # This user_data script only prepares the instance for Ansible access:
-  # - Updates system packages
-  # - Installs Python (required for Ansible)
-  # - Ensures the instance is ready for configuration management
-  #
-  # Your Ansible playbook should handle:
-  # - Splunk installation from verified sources
-  # - Secure password retrieval from AWS Secrets Manager
-  # - Splunk configuration (HEC, inputs, outputs)
-  # - SSL/TLS certificate setup
-  # - User and role management
-  # - Monitoring and alerting setup
-  user_data = var.user_data != null ? var.user_data : <<-EOF
-    #!/bin/bash
-    set -e
-    
-    # Update system packages
-    yum update -y
-    
-    # Install Python 3 (required for Ansible)
-    yum install -y python3 python3-pip
-    
-    # Install AWS CLI (useful for retrieving secrets)
-    pip3 install awscli --upgrade
-    
-    # Prepare data volume mount point (Ansible will mount and configure)
-    mkdir -p /opt/splunk
-    
-    echo "Instance ready for Ansible configuration management"
-  EOF
+  # Enable EBS optimization for better performance
+  ebs_optimized = true
 
-  metadata_options {
-    http_endpoint               = "enabled"
-    http_tokens                 = "required"
-    http_put_response_hop_limit = 1
-  }
-
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.environment}-splunk"
-  })
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.project_name}-${var.environment}-splunk"
+    }
+  )
 
   lifecycle {
     ignore_changes = [ami, user_data]

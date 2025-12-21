@@ -133,7 +133,7 @@ Add credentials in Jenkins:
 
 Terraform Cloud workspaces are automatically named using the pattern:
 
-```
+```text
 <project>-<environment>-<region>-<module>
 ```
 

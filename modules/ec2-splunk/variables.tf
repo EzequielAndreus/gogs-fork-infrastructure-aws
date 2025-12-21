@@ -98,7 +98,7 @@ variable "secrets_manager_arns" {
   default     = []
 }
 
-var iable "user_data" {
+variable "user_data" {
   description = "Custom user data script (if not provided, uses minimal bootstrap for Ansible)"
   type        = string
   default     = null

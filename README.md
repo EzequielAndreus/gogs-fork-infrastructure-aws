@@ -25,7 +25,7 @@ This repository follows infrastructure-as-code best practices by **only provisio
 
 ### Infrastructure Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              AWS Cloud                                       │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
@@ -55,7 +55,7 @@ This repository follows infrastructure-as-code best practices by **only provisio
 
 ## 📁 Repository Structure
 
-```
+```text
 gogs-fork-infrastructure-aws/
 ├── 📄 terragrunt.hcl                    # Root Terragrunt configuration
 ├── 📄 account.hcl                       # AWS account-level settings
@@ -144,7 +144,7 @@ gogs-fork-infrastructure-aws/
 ### Root Configuration Files
 
 | File | Purpose | Importance |
-|------|---------|------------|
+| ---- | ------- | ---------- |
 | `terragrunt.hcl` | Root Terragrunt config with remote state, provider generation, and common inputs | **Critical** - Defines Terraform Cloud backend, AWS provider, and common tags |
 | `account.hcl` | AWS account ID, project name, and Terraform Cloud organization | **Critical** - Must be configured with your AWS account ID and TF Cloud org |
 | `TERRAFORM-CLOUD-SETUP.md` | Terraform Cloud authentication and setup guide | **Critical** - State management configuration |
@@ -157,14 +157,14 @@ gogs-fork-infrastructure-aws/
 ### Jenkins Pipelines
 
 | File | Purpose |
-|------|---------|
+| ---- | ------- |
 | `Jenkinsfile` | Main pipeline that automatically plans and applies both staging and production environments |
 | `jenkins/shared/pipeline-helpers.groovy` | Shared functions for Discord notifications and Jira ticket creation |
 
 ### Unit Tests
 
 | File | Purpose |
-|------|---------|
+| ---- | ------- |
 | `test/vpc_test.go` | VPC module unit tests (CIDR validation, NAT Gateway, tagging) |
 | `test/ecs_test.go` | ECS module unit tests (container config, auto-scaling, Docker images) |
 | `test/rds_test.go` | RDS module unit tests (DB engines, instance classes, storage) |
@@ -174,13 +174,13 @@ gogs-fork-infrastructure-aws/
 ### GitHub Actions
 
 | File | Purpose |
-|------|---------|
+| ---- | ------- |
 | `.github/workflows/ci.yml` | CI pipeline: `terraform fmt`, `validate`, `tflint`, `checkov`, `terragrunt validate` |
 
 ### Terraform Modules
 
 | Module | Purpose | Resources Created |
-|--------|---------|-------------------|
+| ------ | ------- | ----------------- |
 | `vpc` | Network infrastructure | VPC, Subnets (public/private), Internet Gateway, NAT Gateway, Route Tables |
 | `ecs` | Container service | ECS Cluster, Task Definition, Service, ALB, Target Group, Security Groups, IAM Roles, Auto Scaling |
 | `rds` | Database service | RDS Instance (PostgreSQL), Subnet Group, Parameter Group, Security Group, Enhanced Monitoring |
@@ -190,7 +190,7 @@ gogs-fork-infrastructure-aws/
 ### Environment Configurations
 
 | File | Purpose |
-|------|---------|
+| ---- | ------- |
 | `region.hcl` | AWS region and availability zones |
 | `env.hcl` | Environment name (staging/production) |
 | `*/terragrunt.hcl` | Module-specific inputs and dependencies |
@@ -201,7 +201,7 @@ gogs-fork-infrastructure-aws/
 
 The CI pipeline runs on every push and pull request to validate the infrastructure code:
 
-```
+```text
 Push/PR → Format Check → Validate → TFLint → Checkov → Terragrunt Validate → Plan (PRs)
 ```
 
@@ -219,7 +219,7 @@ Push/PR → Format Check → Validate → TFLint → Checkov → Terragrunt Vali
 
 The CD pipeline handles actual infrastructure deployment with **Discord notifications** and **Jira ticket creation on failure**:
 
-```
+```text
 Manual Trigger → Discord Notify → Validate → Init → Plan → Approval → Apply → Discord Notify
                                                               ↓ (on failure)
                                                         Create Jira Ticket
@@ -270,17 +270,17 @@ Manual Trigger → Discord Notify → Validate → Init → Plan → Approval �
    ```bash
    # Terraform Cloud organization
    export TF_CLOUD_ORGANIZATION="your-org-name"
-   
+
    # AWS account ID (prevents hardcoding)
    export TF_VAR_aws_account_id="123456789012"
-   
+
    # Application secrets (see TERRAFORM-CLOUD-SETUP.md for full list)
    export TF_VAR_db_username="your_db_admin"
    export TF_VAR_db_password="your_secure_password"
    export TF_VAR_app_secret_key="your_app_secret_key"
    export TF_VAR_splunk_hec_token="your_hec_token"  # Stored in Secrets Manager for Ansible
    ```
-   
+
    **📖 For complete setup instructions, see [TERRAFORM-CLOUD-SETUP.md](TERRAFORM-CLOUD-SETUP.md)**
 
 3. **Set up required secrets in your CI/CD systems**
@@ -312,7 +312,7 @@ cd vpc
 terragrunt apply
 ```
 
-### Post-Deployment: Ansible Configuration
+### Post-Deployment - Ansible Configuration
 
 After infrastructure is provisioned, use your Ansible repository to configure software:
 
@@ -364,7 +364,7 @@ ansible-playbook -i inventory/staging playbooks/splunk-configure.yml
 ## 📊 Environment Differences
 
 | Feature | Staging | Production |
-|---------|---------|------------|
+| ------- | ------- | ---------- |
 | RDS Instance | db.t3.micro | db.t3.medium |
 | RDS Multi-AZ | ❌ | ✅ |
 | ECS Task Size | 256 CPU / 512 MB | 512 CPU / 1024 MB |

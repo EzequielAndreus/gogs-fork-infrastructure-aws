@@ -1,3 +1,14 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 #------------------------------------------------------------------------------
 # ECS Module - Container Service for Docker Image from DockerHub
 #------------------------------------------------------------------------------
@@ -94,7 +105,7 @@ resource "aws_iam_role" "ecs_task" {
 # CloudWatch Log Group
 #------------------------------------------------------------------------------
 
-resource "aws_cloudwatch_log_group" "ecs" {
+resource "aws_cloudwatch_log
   name              = "/ecs/${var.project_name}-${var.environment}"
   retention_in_days = var.log_retention_days
 
@@ -285,7 +296,7 @@ resource "aws_lb_listener" "http" {
   #     target_group_arn = aws_lb_target_group.main.arn
   #   }
   # }
-  
+
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.main.arn

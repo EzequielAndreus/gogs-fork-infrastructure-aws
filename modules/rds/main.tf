@@ -1,3 +1,14 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 #------------------------------------------------------------------------------
 # RDS Module - Relational Database Service
 #------------------------------------------------------------------------------
@@ -75,54 +86,59 @@ resource "aws_db_parameter_group" "main" {
 #------------------------------------------------------------------------------
 
 resource "aws_db_instance" "main" {
-  identifier = "${var.project_name}-${var.environment}-db"
+  identifier     = "${var.project_name}-${var.environment}-db"
+  engine         = var.engine
+  engine_version = var.engine_version
+  instance_class = var.instance_class
 
-  # Engine configuration
-  engine               = var.db_engine
-  engine_version       = var.db_engine_version
-  instance_class       = var.db_instance_class
-  parameter_group_name = aws_db_parameter_group.main.name
-
-  # Storage configuration
   allocated_storage     = var.allocated_storage
   max_allocated_storage = var.max_allocated_storage
   storage_type          = var.storage_type
-  storage_encrypted     = true
+  storage_encrypted     = var.storage_encrypted
   kms_key_id            = var.kms_key_id
 
-  # Database configuration
   db_name  = var.db_name
-  username = var.db_username
-  password = var.db_password
-  port     = var.db_port
+  username = var.username
+  password = var.password
+  port     = var.port
 
-  # Network configuration
-  db_subnet_group_name   = aws_db_subnet_group.main.name
+  # Enable IAM database authentication
+  iam_database_authentication_enabled = true
+
+  # Enable CloudWatch logging
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+
   vpc_security_group_ids = [aws_security_group.rds.id]
-  publicly_accessible    = false
-  multi_az               = var.multi_az
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  parameter_group_name   = aws_db_parameter_group.main.name
 
   # Backup configuration
-  backup_retention_period = var.backup_retention_period
-  backup_window           = var.backup_window
-  maintenance_window      = var.maintenance_window
+  backup_retention_period      = var.backup_retention_period
+  backup_window                = var.backup_window
+  maintenance_window           = var.maintenance_window
+  auto_minor_version_upgrade   = var.auto_minor_version_upgrade
+  final_snapshot_identifier    = "${var.project_name}-${var.environment}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  skip_final_snapshot          = var.skip_final_snapshot
+  copy_tags_to_snapshot        = true
+  deletion_protection          = var.deletion_protection
 
-  # Monitoring
-  performance_insights_enabled          = var.performance_insights_enabled
-  performance_insights_retention_period = var.performance_insights_enabled ? 7 : null
-  monitoring_interval                   = var.monitoring_interval
-  monitoring_role_arn                   = var.monitoring_interval > 0 ? aws_iam_role.rds_monitoring[0].arn : null
+  # Enhanced Monitoring
+  monitoring_interval = var.monitoring_interval
+  monitoring_role_arn = var.monitoring_interval > 0 ? aws_iam_role.rds_monitoring[0].arn : null
 
-  # Other settings
-  auto_minor_version_upgrade = var.auto_minor_version_upgrade
-  deletion_protection        = var.environment == "production" ? true : var.deletion_protection
-  skip_final_snapshot        = var.environment == "production" ? false : var.skip_final_snapshot
-  final_snapshot_identifier  = var.skip_final_snapshot ? null : "${var.project_name}-${var.environment}-final-snapshot"
-  copy_tags_to_snapshot      = true
+  # Multi-AZ
+  multi_az = var.multi_az
 
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.environment}-db"
-  })
+  # Performance Insights
+  performance_insights_enabled    = var.performance_insights_enabled
+  performance_insights_kms_key_id = var.performance_insights_enabled ? var.kms_key_id : null
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.project_name}-${var.environment}-db"
+    }
+  )
 }
 
 #------------------------------------------------------------------------------
