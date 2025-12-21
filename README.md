@@ -1,8 +1,29 @@
 # Gogs Infrastructure AWS
 
-Infrastructure as Code (IaC) repository for deploying and managing AWS infrastructure using Terraform and Terragrunt. This repository provisions the complete infrastructure stack for the Gogs application, including ECS containers, RDS database, Splunk monitoring, and secure secrets management.
+Infrastructure as Code (IaC) repository for deploying and managing AWS infrastructure using Terraform and Terragrunt. This repository provisions the complete infrastructure stack for the Gogs application, including ECS containers, RDS database, monitoring server infrastructure, and secure secrets management.
+
+> **⚠️ Important**: This repository handles **infrastructure provisioning only**. Application configuration and software installation (including Splunk) should be managed by Ansible or other configuration management tools.
 
 ## 🏗️ Architecture Overview
+
+### Separation of Concerns
+
+This repository follows infrastructure-as-code best practices by **only provisioning infrastructure**:
+
+**Terraform/Terragrunt (This Repository):**
+- ✅ Creates AWS resources (VPC, EC2, RDS, ECS, etc.)
+- ✅ Configures networking and security groups
+- ✅ Manages IAM roles and policies
+- ✅ Provisions storage (EBS volumes, S3)
+
+**Ansible/Configuration Management (Separate Repository):**
+- ✅ Installs and configures Splunk
+- ✅ Manages application configurations
+- ✅ Handles software updates and patches
+- ✅ Configures monitoring and alerting
+- ✅ Manages users and access control
+
+### Infrastructure Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -12,8 +33,8 @@ Infrastructure as Code (IaC) repository for deploying and managing AWS infrastru
 │  │  ┌─────────────────────────────────────────────────────────────────┐  │  │
 │  │  │                    Public Subnets                                │  │  │
 │  │  │  ┌─────────────────┐    ┌─────────────────┐                     │  │  │
-│  │  │  │      ALB        │    │  EC2 Splunk     │                     │  │  │
-│  │  │  │ (Load Balancer) │    │  (Monitoring)   │                     │  │  │
+│  │  │  │      ALB        │    │  EC2 Instance   │                     │  │  │
+│  │  │  │ (Load Balancer) │    │  (for Splunk)   │                     │  │  │
 │  │  │  └────────┬────────┘    └─────────────────┘                     │  │  │
 │  │  └───────────┼─────────────────────────────────────────────────────┘  │  │
 │  │              │                                                         │  │
@@ -68,7 +89,7 @@ gogs-fork-infrastructure-aws/
 │   │   ├── 📄 variables.tf
 │   │   └── 📄 outputs.tf
 │   │
-│   ├── 📂 ec2-splunk/                   # Splunk monitoring server
+│   ├── 📂 ec2-splunk/                   # Splunk server infrastructure (Ansible installs Splunk)
 │   │   ├── 📄 main.tf
 │   │   ├── 📄 variables.tf
 │   │   └── 📄 outputs.tf
@@ -163,7 +184,7 @@ gogs-fork-infrastructure-aws/
 | `vpc` | Network infrastructure | VPC, Subnets (public/private), Internet Gateway, NAT Gateway, Route Tables |
 | `ecs` | Container service | ECS Cluster, Task Definition, Service, ALB, Target Group, Security Groups, IAM Roles, Auto Scaling |
 | `rds` | Database service | RDS Instance (PostgreSQL), Subnet Group, Parameter Group, Security Group, Enhanced Monitoring |
-| `ec2-splunk` | Monitoring server | EC2 Instance, Security Group, IAM Role/Profile, EBS Volume, Optional Elastic IP |
+| `ec2-splunk` | **Monitoring server infrastructure** (Splunk installation via Ansible) | EC2 Instance, Security Group, IAM Role/Profile, EBS Volume, Optional Elastic IP |
 | `secrets-manager` | Secrets storage | Secrets (DB, App, Splunk, DockerHub), KMS Key for encryption |
 
 ### Environment Configurations
@@ -257,8 +278,7 @@ Manual Trigger → Discord Notify → Validate → Init → Plan → Approval �
    export TF_VAR_db_username="your_db_admin"
    export TF_VAR_db_password="your_secure_password"
    export TF_VAR_app_secret_key="your_app_secret_key"
-   export TF_VAR_splunk_admin_password="your_splunk_password"
-   export TF_VAR_splunk_hec_token="your_hec_token"
+   export TF_VAR_splunk_hec_token="your_hec_token"  # Stored in Secrets Manager for Ansible
    ```
    
    **📖 For complete setup instructions, see [TERRAFORM-CLOUD-SETUP.md](TERRAFORM-CLOUD-SETUP.md)**
@@ -291,6 +311,36 @@ terragrunt run-all apply
 cd vpc
 terragrunt apply
 ```
+
+### Post-Deployment: Ansible Configuration
+
+After infrastructure is provisioned, use your Ansible repository to configure software:
+
+```bash
+# 1. Export infrastructure outputs for Ansible inventory
+cd environments/us-east-1/staging
+
+# Get Splunk server IP
+export SPLUNK_IP=$(terragrunt output -raw splunk_public_ip --terragrunt-working-dir=ec2-splunk)
+
+# Get RDS endpoint
+export DB_ENDPOINT=$(terragrunt output -raw db_instance_endpoint --terragrunt-working-dir=rds)
+
+# 2. Update Ansible inventory with infrastructure details
+echo "[splunk]" > inventory/staging
+echo "splunk-server ansible_host=${SPLUNK_IP} ansible_user=ec2-user" >> inventory/staging
+
+# 3. Run Ansible playbooks (in your Ansible repository)
+ansible-playbook -i inventory/staging playbooks/splunk-install.yml
+ansible-playbook -i inventory/staging playbooks/splunk-configure.yml
+```
+
+**Key Outputs for Ansible:**
+- `splunk_public_ip` / `splunk_private_ip` - Server access
+- `data_volume_id` - EBS volume for /opt/splunk
+- `instance_id` - For AWS Systems Manager
+- `iam_role_arn` - IAM permissions (Secrets Manager access)
+- `security_group_id` - Network configuration reference
 
 #### Using Jenkins (recommended for production):
 

@@ -195,46 +195,39 @@ resource "aws_instance" "splunk" {
     delete_on_termination = true
   }
 
-  # SECURITY WARNING: The user_data script has several security concerns:
-  # 1. PASSWORD EXPOSURE: The splunk_admin_password is embedded in plaintext in user_data,
-  #    which is stored in EC2 instance metadata and potentially in cloud-init logs.
-  #    RECOMMENDATION: Fetch the password from AWS Secrets Manager at runtime instead.
-  # 2. DOWNLOAD INTEGRITY: Splunk is downloaded from an external URL without checksum or 
-  #    signature verification. A compromise of the download source could allow RCE.
-  #    RECOMMENDATION: Add GPG signature verification or use a trusted package repository.
-  # 3. EBS VOLUME MOUNTING: The data volume attachment uses /dev/sdf which may be mapped
-  #    differently on newer instance types. Document expected device name mapping.
+  # IMPORTANT: This instance is provisioned for Splunk but does NOT install Splunk.
+  # Splunk installation and configuration should be managed by Ansible from your
+  # configuration management repository.
   #
-  # TODO: Refactor to use Secrets Manager for runtime password retrieval
-  # TODO: Add integrity verification for Splunk downloads (checksum or GPG signature)
+  # This user_data script only prepares the instance for Ansible access:
+  # - Updates system packages
+  # - Installs Python (required for Ansible)
+  # - Ensures the instance is ready for configuration management
+  #
+  # Your Ansible playbook should handle:
+  # - Splunk installation from verified sources
+  # - Secure password retrieval from AWS Secrets Manager
+  # - Splunk configuration (HEC, inputs, outputs)
+  # - SSL/TLS certificate setup
+  # - User and role management
+  # - Monitoring and alerting setup
   user_data = var.user_data != null ? var.user_data : <<-EOF
     #!/bin/bash
     set -e
     
-    # Update system
+    # Update system packages
     yum update -y
     
-    # Install required packages
-    yum install -y wget
+    # Install Python 3 (required for Ansible)
+    yum install -y python3 python3-pip
     
-    # Create Splunk user
-    useradd -m -s /bin/bash splunk || true
+    # Install AWS CLI (useful for retrieving secrets)
+    pip3 install awscli --upgrade
     
-    # Download and install Splunk
-    cd /opt
-    wget -O splunk.rpm "${var.splunk_download_url}"
-    rpm -i splunk.rpm || true
+    # Prepare data volume mount point (Ansible will mount and configure)
+    mkdir -p /opt/splunk
     
-    # Start Splunk and accept license
-    /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt --seed-passwd "${var.splunk_admin_password}"
-    
-    # Enable Splunk to start at boot
-    /opt/splunk/bin/splunk enable boot-start -user splunk
-    
-    # Configure HEC
-    /opt/splunk/bin/splunk http-event-collector enable -uri https://localhost:8089 -auth admin:${var.splunk_admin_password}
-    
-    echo "Splunk installation complete"
+    echo "Instance ready for Ansible configuration management"
   EOF
 
   metadata_options {

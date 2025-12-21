@@ -93,25 +93,13 @@ variable "ssh_public_key" {
 }
 
 variable "secrets_manager_arns" {
-  description = "List of Secrets Manager ARNs that Splunk can access"
+  description = "List of Secrets Manager ARNs that the instance can access (for Ansible to retrieve credentials)"
   type        = list(string)
   default     = []
 }
 
-variable "splunk_download_url" {
-  description = "URL to download Splunk Enterprise RPM"
-  type        = string
-  default     = "https://download.splunk.com/products/splunk/releases/9.1.1/linux/splunk-9.1.1-64e843ea36b1-linux-2.6-x86_64.rpm"
-}
-
-variable "splunk_admin_password" {
-  description = "Admin password for Splunk"
-  type        = string
-  sensitive   = true
-}
-
-variable "user_data" {
-  description = "Custom user data script (overrides default Splunk installation)"
+var iable "user_data" {
+  description = "Custom user data script (if not provided, uses minimal bootstrap for Ansible)"
   type        = string
   default     = null
 }

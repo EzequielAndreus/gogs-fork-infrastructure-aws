@@ -80,9 +80,6 @@ inputs = {
   # Secrets Manager access
   secrets_manager_arns = dependency.secrets_manager.outputs.all_secret_arns
   
-  # Splunk configuration - must be set in environment; no insecure default allowed
-  splunk_admin_password = get_env("TF_VAR_splunk_admin_password")
-  
   # Create Elastic IP for stable access
   create_elastic_ip = true
 }

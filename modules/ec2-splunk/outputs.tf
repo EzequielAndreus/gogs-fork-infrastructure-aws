@@ -48,11 +48,21 @@ output "splunk_web_url" {
 }
 
 output "splunk_hec_endpoint" {
-  description = "Splunk HTTP Event Collector endpoint"
-  value       = "https://${aws_instance.splunk.private_ip}:8088"
+  description = "Splunk HEC endpoint URL (Splunk must be installed and configured by Ansible first)"
+  value       = "https://${var.create_elastic_ip ? aws_eip.splunk[0].public_ip : aws_instance.splunk.private_ip}:8088"
 }
 
 output "data_volume_id" {
-  description = "ID of the data EBS volume"
+  description = "EBS data volume ID (for Ansible to mount at /opt/splunk)"
   value       = aws_ebs_volume.splunk_data.id
+}
+
+output "data_volume_device_name" {
+  description = "Device name for data volume (may appear as /dev/nvme1n1 on nitro instances)"
+  value       = "/dev/sdf"
+}
+
+output "elastic_ip" {
+  description = "Elastic IP address (if created)"
+  value       = var.create_elastic_ip ? aws_eip.splunk[0].public_ip : null
 }
