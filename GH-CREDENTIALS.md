@@ -203,7 +203,7 @@ gh secret set DOCKER_IMAGE --body "username/app:latest"
 3. Click **New repository secret**
 4. **First, add Terraform Cloud token:**
    - **Name**: `TF_API_TOKEN`
-   - **Secret**: Your Terraform Cloud API token (from https://app.terraform.io/app/settings/tokens)
+   - **Secret**: Your Terraform Cloud API token (from <https://app.terraform.io/app/settings/tokens>)
 5. Click **Add secret**
 6. **Then, add AWS credentials:**
    - **Name**: `AWS_ACCESS_KEY_ID`
