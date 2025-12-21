@@ -1,0 +1,24 @@
+# Checkov configuration
+# https://www.checkov.io/
+
+# Check directories
+directory:
+  - modules/
+
+# Framework to use
+framework:
+  - terraform
+
+# Compact output
+compact: true
+
+# Soft fail (don't exit with error code)
+soft-fail: true
+
+# Output format
+output:
+  - cli
+  - json
+
+# Output file for JSON
+output-file-path: checkov-results.json
