@@ -3,19 +3,23 @@
 # This file contains common configurations shared across all environments
 #------------------------------------------------------------------------------
 
-# Configure Terragrunt to store state in S3
+# Configure Terragrunt to store state in Terraform Cloud
+# Requires TF_CLOUD_ORGANIZATION and TF_TOKEN_app_terraform_io to be set
 remote_state {
-  backend = "s3"
+  backend = "remote"
   generate = {
     path      = "backend.tf"
     if_exists = "overwrite_terragrunt"
   }
   config = {
-    bucket         = "${local.project_name}-terraform-state-${local.aws_account_id}"
-    key            = "${path_relative_to_include()}/terraform.tfstate"
-    region         = local.aws_region
-    encrypt        = true
-    dynamodb_table = "${local.project_name}-terraform-locks"
+    # Terraform Cloud organization name (set via environment variable)
+    organization = local.terraform_cloud_organization
+    
+    # Workspace naming pattern: <project>-<environment>-<region>-<module>
+    # Example: gogs-fork-production-us-east-1-vpc
+    workspaces = {
+      name = "${local.project_name}-${local.environment}-${local.aws_region}-${basename(get_terragrunt_dir())}"
+    }
   }
 }
 
@@ -61,10 +65,11 @@ locals {
   environment_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
 
   # Extract commonly used variables
-  aws_account_id = local.account_vars.locals.aws_account_id
-  aws_region     = local.region_vars.locals.aws_region
-  environment    = local.environment_vars.locals.environment
-  project_name   = local.account_vars.locals.project_name
+  aws_account_id               = local.account_vars.locals.aws_account_id
+  aws_region                   = local.region_vars.locals.aws_region
+  environment                  = local.environment_vars.locals.environment
+  project_name                 = local.account_vars.locals.project_name
+  terraform_cloud_organization = local.account_vars.locals.terraform_cloud_organization
 }
 
 # Inputs to pass to all modules

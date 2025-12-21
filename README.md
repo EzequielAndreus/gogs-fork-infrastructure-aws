@@ -124,8 +124,9 @@ gogs-fork-infrastructure-aws/
 
 | File | Purpose | Importance |
 |------|---------|------------|
-| `terragrunt.hcl` | Root Terragrunt config with remote state, provider generation, and common inputs | **Critical** - Defines S3 backend, AWS provider, and common tags |
-| `account.hcl` | AWS account ID and project name | **Critical** - Must be updated with your AWS account ID |
+| `terragrunt.hcl` | Root Terragrunt config with remote state, provider generation, and common inputs | **Critical** - Defines Terraform Cloud backend, AWS provider, and common tags |
+| `account.hcl` | AWS account ID, project name, and Terraform Cloud organization | **Critical** - Must be configured with your AWS account ID and TF Cloud org |
+| `TERRAFORM-CLOUD-SETUP.md` | Terraform Cloud authentication and setup guide | **Critical** - State management configuration |
 | `Jenkinsfile` | Main CD pipeline dispatcher | **Critical** - Routes to environment-specific pipelines |
 | `README.md` | Repository documentation | Documentation |
 | `GH-CREDENTIALS.md` | GitHub Actions CI credentials documentation | **Important** - CI security reference |
@@ -225,6 +226,7 @@ Manual Trigger → Discord Notify → Validate → Init → Plan → Approval �
 - Terraform >= 1.5.0
 - Terragrunt >= 0.53.0
 - AWS CLI configured with appropriate credentials
+- **Terraform Cloud account** - Sign up at [https://app.terraform.io](https://app.terraform.io)
 - Jenkins (for CD) with Discord Notifier and Jira plugins
 - GitHub repository (for CI)
 - Discord webhook URL for notifications
@@ -232,30 +234,39 @@ Manual Trigger → Discord Notify → Validate → Init → Plan → Approval �
 
 ### Initial Setup
 
-1. **Update account configuration:**
+1. **Configure Terraform Cloud authentication:**
    ```bash
-   # Edit account.hcl with your AWS account ID
-   vim account.hcl
+   # See detailed instructions in TERRAFORM-CLOUD-SETUP.md
+   
+   # Option 1: Using terraform login (interactive)
+   terraform login
+   
+   # Option 2: Set environment variable
+   export TF_TOKEN_app_terraform_io="your_terraform_cloud_api_token"
    ```
 
-2. **Create S3 bucket for Terraform state:**
+2. **Set required environment variables:**
    ```bash
-   aws s3 mb s3://gogs-app-terraform-state-YOUR_ACCOUNT_ID --region us-east-1
+   # Terraform Cloud organization
+   export TF_CLOUD_ORGANIZATION="your-org-name"
+   
+   # AWS account ID (prevents hardcoding)
+   export TF_VAR_aws_account_id="123456789012"
+   
+   # Application secrets (see TERRAFORM-CLOUD-SETUP.md for full list)
+   export TF_VAR_db_username="your_db_admin"
+   export TF_VAR_db_password="your_secure_password"
+   export TF_VAR_app_secret_key="your_app_secret_key"
+   export TF_VAR_splunk_admin_password="your_splunk_password"
+   export TF_VAR_splunk_hec_token="your_hec_token"
    ```
+   
+   **📖 For complete setup instructions, see [TERRAFORM-CLOUD-SETUP.md](TERRAFORM-CLOUD-SETUP.md)**
 
-3. **Create DynamoDB table for state locking:**
-   ```bash
-   aws dynamodb create-table \
-     --table-name gogs-app-terraform-locks \
-     --attribute-definitions AttributeName=LockID,AttributeType=S \
-     --key-schema AttributeName=LockID,KeyType=HASH \
-     --billing-mode PAY_PER_REQUEST \
-     --region us-east-1
-   ```
-
-4. **Set up required secrets in your CI/CD systems**
+3. **Set up required secrets in your CI/CD systems**
    - For GitHub Actions (CI): See [GH-CREDENTIALS.md](GH-CREDENTIALS.md)
    - For Jenkins (CD): See [JENKINS-CREDENTIALS.md](JENKINS-CREDENTIALS.md)
+   - For Terraform Cloud: See [TERRAFORM-CLOUD-SETUP.md](TERRAFORM-CLOUD-SETUP.md)
 
 ### Deploying Infrastructure
 
@@ -291,12 +302,14 @@ terragrunt apply
 
 ## 🔐 Security Considerations
 
-1. **Never commit secrets** - All sensitive values are passed via environment variables
-2. **Use AWS Secrets Manager** - Credentials are stored encrypted and rotated
-3. **Enable encryption** - RDS and EBS volumes are encrypted at rest
-4. **Restrict network access** - Private subnets for databases, security groups limit access
-5. **IAM least privilege** - Roles have minimal required permissions
-6. **State file security** - S3 backend with encryption and access controls
+1. **Never commit secrets** - All sensitive values are passed via environment variables or Terraform Cloud workspace variables
+2. **Use AWS Secrets Manager** - Application credentials are stored encrypted and can be rotated
+3. **Enable encryption** - RDS and EBS volumes are encrypted at rest with KMS
+4. **Restrict network access** - Private subnets for databases, security groups limit access to only required sources
+5. **IAM least privilege** - Roles have minimal required permissions for their specific tasks
+6. **State file security** - Terraform Cloud provides encrypted remote state with access controls and audit logging
+7. **Credential management** - No hardcoded credentials in code; all secrets use `get_env()` or are injected at runtime
+8. **Terraform Cloud security** - Enable MFA, use team tokens for CI/CD, and regularly rotate API tokens
 
 ## 📊 Environment Differences
 
