@@ -105,7 +105,7 @@ resource "aws_iam_role" "ecs_task" {
 # CloudWatch Log Group
 #------------------------------------------------------------------------------
 
-resource "aws_cloudwatch_log
+resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.project_name}-${var.environment}"
   retention_in_days = var.log_retention_days
 
@@ -202,7 +202,7 @@ resource "aws_security_group" "alb" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.alb_ingress_cidr_blocks
   }
 
   ingress {
@@ -210,7 +210,7 @@ resource "aws_security_group" "alb" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.alb_ingress_cidr_blocks
   }
 
   egress {

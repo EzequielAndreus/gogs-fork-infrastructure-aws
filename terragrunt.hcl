@@ -3,19 +3,8 @@
 # This file contains common configurations shared across all environments
 #------------------------------------------------------------------------------
 
-# Terraform Cloud Configuration (for CLI-driven runs)
-terraform {
-  cloud {
-    organization = "gogs-state"
-
-    workspaces {
-      name = "gogs-iac"
-    }
-  }
-}
-
 # Configure Terragrunt to store state in Terraform Cloud
-# Requires TF_CLOUD_ORGANIZATION and TF_TOKEN_app_terraform_io to be set
+# The remote_state block will generate a backend.tf file with the proper configuration
 remote_state {
   backend = "remote"
   generate = {
@@ -35,27 +24,19 @@ remote_state {
 }
 
 # Generate provider configuration
+# Note: Modules already have terraform{} and required_providers blocks
+# This only generates the provider configuration with region and tags
 generate "provider" {
   path      = "provider.tf"
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
-terraform {
-  required_version = ">= 1.5.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
 provider "aws" {
   region = "${local.aws_region}"
 
   default_tags {
     tags = {
       Project     = "${local.project_name}"
+      Environment = "${local.environment}"
       ManagedBy   = "Terraform"
       Repository  = "gogs-fork-infrastructure-aws"
     }

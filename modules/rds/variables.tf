@@ -27,19 +27,19 @@ variable "allowed_security_groups" {
   type        = list(string)
 }
 
-variable "db_engine" {
+variable "engine" {
   description = "Database engine (mysql, postgres, etc.)"
   type        = string
   default     = "postgres"
 }
 
-variable "db_engine_version" {
+variable "engine_version" {
   description = "Database engine version"
   type        = string
   default     = "15.4"
 }
 
-variable "db_instance_class" {
+variable "instance_class" {
   description = "RDS instance class"
   type        = string
   default     = "db.t3.micro"
@@ -66,19 +66,19 @@ variable "db_name" {
   type        = string
 }
 
-variable "db_username" {
+variable "username" {
   description = "Master username for the database"
   type        = string
   sensitive   = true
 }
 
-variable "db_password" {
+variable "password" {
   description = "Master password for the database"
   type        = string
   sensitive   = true
 }
 
-variable "db_port" {
+variable "port" {
   description = "Port for the database"
   type        = number
   default     = 5432
@@ -100,6 +100,12 @@ variable "storage_type" {
   description = "Storage type (gp2, gp3, io1)"
   type        = string
   default     = "gp3"
+}
+
+variable "storage_encrypted" {
+  description = "Enable storage encryption"
+  type        = bool
+  default     = true
 }
 
 variable "kms_key_id" {

@@ -24,29 +24,18 @@ dependency "vpc" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
-dependency "ecs" {
-  config_path = "../ecs"
-  
-  # Mock outputs for plan without apply
-  mock_outputs = {
-    ecs_security_group_id = "sg-mock12345"
-  }
-  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
-  skip_outputs = true  # Break circular dependency - ECS depends on RDS outputs
-}
+# NOTE: Removed ECS dependency to break circular dependency.
+# The ECS module depends on RDS, so RDS cannot depend on ECS.
+# Security group rules for ECS access to RDS should be managed by the ECS module
+# or a separate security group rule resource.
 
 # Module-specific inputs
 inputs = {
   vpc_id             = dependency.vpc.outputs.vpc_id
   private_subnet_ids = dependency.vpc.outputs.private_subnet_ids
   
-  # NOTE: Due to a circular dependency between RDS and ECS, allowed_security_groups must be configured carefully:
-  # 1. For initial deployment: Use a bootstrap placeholder security group ID (e.g., "sg-bootstrap12345")
-  # 2. After ECS is created: Update this value with the actual ECS security group ID
-  # 3. Alternatively: Use a separate Terragrunt configuration to add the ECS security group rule after both resources exist
-  # TODO: Replace "sg-bootstrap12345" with the actual ECS security group ID after initial deployment.
-  # This breaks the circular dependency for the first apply. See documentation for details.
-  allowed_security_groups = ["sg-bootstrap12345"]
+  # allowed_security_groups is left empty - ECS module will create ingress rules
+  allowed_security_groups = []
   
   # Database configuration - larger for production
   db_engine                 = "postgres"
