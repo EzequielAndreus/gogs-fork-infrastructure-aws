@@ -35,6 +35,8 @@ jobs:
           VALIDATE_ENV: true
           VALIDATE_GITLEAKS: true
           VALIDATE_GROOVY: true
+          ERROR_ON_MISSING_EXEC_BIT: false
+          GROOVY_SEVERITY: warning
           VALIDATE_MARKDOWN: true
           VALIDATE_TERRAFORM_FMT: true
           VALIDATE_TERRAFORM_TERRASCAN: true

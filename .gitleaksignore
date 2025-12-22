@@ -1,0 +1,2 @@
+# Ignore false positives in documentation files
+JENKINS-CREDENTIALS.md
