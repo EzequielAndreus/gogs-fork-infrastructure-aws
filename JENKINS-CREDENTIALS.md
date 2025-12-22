@@ -4,16 +4,16 @@ This document outlines all credentials and secrets required for the **Continuous
 
 ## 📋 Table of Contents
 
-1. [Overview](#overview)
-2. [Terraform Cloud Credentials](#terraform-cloud-credentials)
-3. [AWS Credentials](#aws-credentials)
-4. [Jenkins Credentials](#jenkins-credentials)
-5. [Discord Webhook Configuration](#discord-webhook-configuration)
-6. [Jira API Configuration](#jira-api-configuration)
-7. [Terraform Variables](#terraform-variables)
-8. [Security Best Practices](#security-best-practices)
-9. [Secret Rotation](#secret-rotation)
-10. [Troubleshooting](#troubleshooting)
+1. [Overview](#-overview)
+2. [Terraform Cloud Credentials](#-terraform-cloud-credentials)
+3. [AWS Credentials](#-aws-credentials)
+4. [Jenkins Credentials](#-jenkins-credentials)
+5. [Discord Webhook Configuration](#-discord-webhook-configuration)
+6. [Jira API Configuration](#-jira-api-configuration)
+7. [Terraform Variables](#-terraform-variables)
+8. [Security Best Practices](#️-security-best-practices)
+9. [Secret Rotation](#-secret-rotation)
+10. [Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -386,7 +386,7 @@ aws iam create-access-key --user-name jenkins-cd-production
 
 Navigate to Jenkins → **Manage Jenkins** → **Manage Credentials** → **System** → **Global credentials**
 
-### Required Credentials
+### Jenkins Credentials List
 
 | Credential ID | Type | Description | Environment |
 |---------------|------|-------------|-------------|
@@ -447,7 +447,7 @@ stage('Staging') {
 
 ### Setting Up Jenkins Credentials
 
-#### Via Jenkins UI:
+#### Via Jenkins UI
 
 1. **AWS Credentials (Username with password):**
    - Go to: Manage Jenkins → Manage Credentials → System → Global credentials → Add Credentials
@@ -484,7 +484,7 @@ stage('Staging') {
    - Description: `Database credentials for [environment]`
    - Click **OK**
 
-#### Via Jenkins CLI:
+#### Via Jenkins CLI
 
 ```bash
 # Download Jenkins CLI
@@ -522,7 +522,7 @@ java -jar jenkins-cli.jar -s http://your-jenkins-url/ \
   < discord-webhook.xml
 ```
 
-#### Via Groovy Script (Jenkins Console):
+#### Via Groovy Script (Jenkins Console)
 
 Navigate to Jenkins → **Manage Jenkins** → **Script Console**
 
@@ -610,12 +610,13 @@ Discord webhooks send real-time pipeline notifications to designated channels.
 
 ### Webhook URL Format
 
-```
+```text
 https://discord.com/api/webhooks/{webhook_id}/{webhook_token}
 ```
 
 Example:
-```
+
+```text
 https://discord.com/api/webhooks/123456789012345678/AbCdEfGhIjKlMnOpQrStUvWxYz1234567890AbCdEfGhIjKlMnOpQr
 ```
 

@@ -22,14 +22,14 @@ pipeline {
         //----------------------------------------------------------------------
         TF_CLOUD_ORGANIZATION = credentials('tfc-organization')  // Your TF Cloud org name
         TF_TOKEN_app_terraform_io = credentials('tfc-api-token')  // TF Cloud API token for backend auth
-        
+
         //----------------------------------------------------------------------
         // Terraform/Terragrunt Configuration
         //----------------------------------------------------------------------
         TERRAFORM_VERSION = '1.5.7'
         TERRAGRUNT_VERSION = '0.53.0'
         AWS_DEFAULT_REGION = 'us-east-1'  // Can be overridden per environment
-        
+
         //----------------------------------------------------------------------
         // Environment Paths
         //----------------------------------------------------------------------
@@ -55,7 +55,7 @@ pipeline {
         DISCORD_WEBHOOK_PRODUCTION = credentials('discord-webhook-production')
 
     }
-    
+
     parameters {
         booleanParam(
             name: 'FORCE_APPLY_STAGING',
@@ -88,16 +88,16 @@ pipeline {
                 script {
                     // Load helper functions once for entire pipeline
                     helpers = load 'jenkins/shared/pipeline-helpers.groovy'
-                    
-                    echo "=========================================="
-                    echo "  Infrastructure Provisioning Pipeline   "
-                    echo "=========================================="
+
+                    echo '=========================================='
+                    echo '  Infrastructure Provisioning Pipeline   '
+                    echo '=========================================='
                     echo "Terraform Version: ${TERRAFORM_VERSION}"
                     echo "Terragrunt Version: ${TERRAGRUNT_VERSION}"
                     echo "TF Cloud Org: ${TF_CLOUD_ORGANIZATION}"
-                    echo "State Backend: Terraform Cloud (Remote)"
-                    echo "=========================================="
-                    
+                    echo 'State Backend: Terraform Cloud (Remote)'
+                    echo '=========================================='
+
                     // Install required tools
                     helpers.setupTools(TERRAFORM_VERSION, TERRAGRUNT_VERSION)
                 }
@@ -118,8 +118,8 @@ pipeline {
                     steps {
                         script {
                             env.CURRENT_STAGE = 'Staging - Plan'
-                            echo "🔍 Staging: Running Terragrunt plan..."
-                            
+                            echo '🔍 Staging: Running Terragrunt plan...'
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'STARTED',
@@ -128,21 +128,21 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "Planning infrastructure changes"
+                                'Planning infrastructure changes'
                             )
-                            
+
                             // Run terragrunt plan for all modules
                             def hasChanges = helpers.runTerragruntPlan(
                                 ENV_PATH,
                                 MODULE_ORDER
                             )
-                            
+
                             env.STAGING_HAS_CHANGES = hasChanges ? 'true' : 'false'
-                            
+
                             if (hasChanges) {
-                                echo "✅ Staging: Changes detected, ready for apply"
+                                echo '✅ Staging: Changes detected, ready for apply'
                             } else {
-                                echo "ℹ️ Staging: No changes detected"
+                                echo 'ℹ️ Staging: No changes detected'
                             }
                         }
                     }
@@ -150,15 +150,15 @@ pipeline {
 
                 stage('Staging - Apply') {
                     when {
-                        expression { 
-                            env.STAGING_HAS_CHANGES == 'true' || params.FORCE_APPLY_STAGING 
+                        expression {
+                            env.STAGING_HAS_CHANGES == 'true' || params.FORCE_APPLY_STAGING
                         }
                     }
                     steps {
                         script {
                             env.CURRENT_STAGE = 'Staging - Apply'
-                            echo "🚀 Staging: Running Terragrunt apply..."
-                            
+                            echo '🚀 Staging: Running Terragrunt apply...'
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'STARTED',
@@ -167,15 +167,15 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "Applying infrastructure changes"
+                                'Applying infrastructure changes'
                             )
-                            
+
                             // Run terragrunt apply for all modules
                             helpers.runTerragruntApply(
                                 ENV_PATH,
                                 MODULE_ORDER
                             )
-                            
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'SUCCESS',
@@ -184,7 +184,7 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "Infrastructure successfully deployed"
+                                'Infrastructure successfully deployed'
                             )
                         }
                     }
@@ -192,15 +192,15 @@ pipeline {
 
                 stage('Staging - No Changes') {
                     when {
-                        expression { 
-                            env.STAGING_HAS_CHANGES == 'false' && !params.FORCE_APPLY_STAGING 
+                        expression {
+                            env.STAGING_HAS_CHANGES == 'false' && !params.FORCE_APPLY_STAGING
                         }
                     }
                     steps {
                         script {
-                            echo "ℹ️ Staging: No infrastructure changes detected"
-                            echo "📦 All modules are up-to-date"
-                            
+                            echo 'ℹ️ Staging: No infrastructure changes detected'
+                            echo '📦 All modules are up-to-date'
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'SUCCESS',
@@ -209,7 +209,7 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "No infrastructure changes detected"
+                                'No infrastructure changes detected'
                             )
                         }
                     }
@@ -231,8 +231,8 @@ pipeline {
                     steps {
                         script {
                             env.CURRENT_STAGE = 'Production - Plan'
-                            echo "🔍 Production: Running Terragrunt plan..."
-                            
+                            echo '🔍 Production: Running Terragrunt plan...'
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'STARTED',
@@ -241,21 +241,21 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "Planning infrastructure changes"
+                                'Planning infrastructure changes'
                             )
-                            
+
                             // Run terragrunt plan for all modules
                             def hasChanges = helpers.runTerragruntPlan(
                                 ENV_PATH,
                                 MODULE_ORDER
                             )
-                            
+
                             env.PRODUCTION_HAS_CHANGES = hasChanges ? 'true' : 'false'
-                            
+
                             if (hasChanges) {
-                                echo "✅ Production: Changes detected, requires approval"
+                                echo '✅ Production: Changes detected, requires approval'
                             } else {
-                                echo "ℹ️ Production: No changes detected"
+                                echo 'ℹ️ Production: No changes detected'
                             }
                         }
                     }
@@ -263,14 +263,14 @@ pipeline {
 
                 stage('Production - Approval') {
                     when {
-                        expression { 
-                            env.PRODUCTION_HAS_CHANGES == 'true' || params.FORCE_APPLY_PRODUCTION 
+                        expression {
+                            env.PRODUCTION_HAS_CHANGES == 'true' || params.FORCE_APPLY_PRODUCTION
                         }
                     }
                     steps {
                         script {
                             env.CURRENT_STAGE = 'Production - Approval'
-                            
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'APPROVAL_REQUIRED',
@@ -279,9 +279,9 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "Manual approval required to proceed"
+                                'Manual approval required to proceed'
                             )
-                            
+
                             timeout(time: 60, unit: 'MINUTES') {
                                 input message: '🚦 Apply to Production?',
                                       ok: 'Deploy to Production',
@@ -293,15 +293,15 @@ pipeline {
 
                 stage('Production - Apply') {
                     when {
-                        expression { 
-                            env.PRODUCTION_HAS_CHANGES == 'true' || params.FORCE_APPLY_PRODUCTION 
+                        expression {
+                            env.PRODUCTION_HAS_CHANGES == 'true' || params.FORCE_APPLY_PRODUCTION
                         }
                     }
                     steps {
                         script {
                             env.CURRENT_STAGE = 'Production - Apply'
-                            echo "🚀 Production: Running Terragrunt apply..."
-                            
+                            echo '🚀 Production: Running Terragrunt apply...'
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'STARTED',
@@ -310,15 +310,15 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "Applying infrastructure changes"
+                                'Applying infrastructure changes'
                             )
-                            
+
                             // Run terragrunt apply for all modules
                             helpers.runTerragruntApply(
                                 ENV_PATH,
                                 MODULE_ORDER
                             )
-                            
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'SUCCESS',
@@ -327,7 +327,7 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "Infrastructure successfully deployed"
+                                'Infrastructure successfully deployed'
                             )
                         }
                     }
@@ -335,15 +335,15 @@ pipeline {
 
                 stage('Production - No Changes') {
                     when {
-                        expression { 
-                            env.PRODUCTION_HAS_CHANGES == 'false' && !params.FORCE_APPLY_PRODUCTION 
+                        expression {
+                            env.PRODUCTION_HAS_CHANGES == 'false' && !params.FORCE_APPLY_PRODUCTION
                         }
                     }
                     steps {
                         script {
-                            echo "ℹ️ Production: No infrastructure changes detected"
-                            echo "📦 All modules are up-to-date"
-                            
+                            echo 'ℹ️ Production: No infrastructure changes detected'
+                            echo '📦 All modules are up-to-date'
+
                             helpers.sendDiscordNotification(
                                 DISCORD_WEBHOOK,
                                 'SUCCESS',
@@ -352,7 +352,7 @@ pipeline {
                                 'all',
                                 env.BUILD_URL,
                                 env.BUILD_NUMBER,
-                                "No infrastructure changes detected"
+                                'No infrastructure changes detected'
                             )
                         }
                     }
@@ -367,14 +367,14 @@ pipeline {
     post {
         success {
             script {
-                echo "✅ Pipeline completed successfully!"
+                echo '✅ Pipeline completed successfully!'
             }
         }
-        
+
         failure {
             script {
                 // Get error message (truncated to 2000 chars for Jira)
-                def errorMessage = ""
+                def errorMessage = ''
                 try {
                     def logs = currentBuild.rawBuild?.getLog(500)
                     if (logs) {
@@ -386,14 +386,14 @@ pipeline {
                 } catch (Exception e) {
                     errorMessage = "Could not retrieve logs: ${e.message}"
                 }
-                
+
                 // Determine which environment failed
                 def failedEnv = env.CURRENT_STAGE ?: 'Unknown'
-                def webhook = failedEnv.toLowerCase().contains('production') ? 
+                def webhook = failedEnv.toLowerCase().contains('production') ?
                              env.DISCORD_WEBHOOK_PRODUCTION : env.DISCORD_WEBHOOK_STAGING
-                def environment = failedEnv.toLowerCase().contains('production') ? 
+                def environment = failedEnv.toLowerCase().contains('production') ?
                                  'production' : 'staging'
-                
+
                 // Send Discord notification
                 helpers.sendDiscordNotification(
                     webhook,
@@ -405,7 +405,7 @@ pipeline {
                     env.BUILD_NUMBER,
                     "Pipeline failed at stage: ${failedEnv}"
                 )
-                
+
                 // Create Jira ticket
                 try {
                     def ticketKey = helpers.createJiraTicket(
@@ -425,12 +425,12 @@ pipeline {
                 }
             }
         }
-        
+
         always {
             script {
-                echo "======================================"
-                echo "  Pipeline Execution Complete        "
-                echo "======================================"
+                echo '======================================'
+                echo '  Pipeline Execution Complete        '
+                echo '======================================'
             }
         }
     }
