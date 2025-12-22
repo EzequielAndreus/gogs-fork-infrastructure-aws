@@ -16,13 +16,6 @@ This repository follows infrastructure-as-code best practices by **only provisio
 - ✅ Manages IAM roles and policies
 - ✅ Provisions storage (EBS volumes, S3)
 
-**Ansible/Configuration Management (Separate Repository):**
-- ✅ Installs and configures Splunk
-- ✅ Manages application configurations
-- ✅ Handles software updates and patches
-- ✅ Configures monitoring and alerting
-- ✅ Manages users and access control
-
 ### Infrastructure Diagram
 
 ```text
@@ -64,6 +57,10 @@ gogs-fork-infrastructure-aws/
 ├── 📄 GH-CREDENTIALS.md                 # GitHub Actions CI credentials documentation
 ├── 📄 JENKINS-CREDENTIALS.md            # Jenkins CD credentials documentation
 ├── 📄 MODULES.md                        # Terraform modules documentation
+├── 📄 TERRAFORM-CLOUD-SETUP.md          # Terraform Cloud setup guide
+├── 📄 .tflint.hcl                       # TFLint configuration
+├── 📄 .checkov.yml                      # Checkov security scanner config
+├── 📄 .gitleaks.toml                    # GitLeaks secret scanner config
 │
 ├── 📂 .github/
 │   └── 📂 workflows/
@@ -129,14 +126,19 @@ gogs-fork-infrastructure-aws/
             └── 📂 secrets-manager/
                 └── 📄 terragrunt.hcl
 │
-├── 📂 test/                             # Terraform module unit tests
-│   ├── 📄 go.mod                        # Go module definition
-│   ├── 📄 README.md                     # Test documentation
-│   ├── 📄 vpc_test.go                   # VPC module tests
-│   ├── 📄 ecs_test.go                   # ECS module tests
-│   ├── 📄 rds_test.go                   # RDS module tests
-│   ├── 📄 ec2_splunk_test.go            # EC2-Splunk module tests
-│   └── 📄 secrets_manager_test.go       # Secrets Manager module tests
+├── 📂 test/                             # Tests and test utilities
+│   ├── 📂 jenkins/                      # Jenkins pipeline tests
+│   │   ├── 📄 JenkinsfilePipelineTest.groovy  # Pipeline unit tests
+│   │   └── 📄 README.md                 # Jenkins test documentation
+│   └── 📂 unit/                         # Terraform module unit tests (Terratest)
+│       ├── 📄 go.mod                    # Go module definition
+│       ├── 📄 doc.go                    # Package documentation
+│       ├── 📄 README.md                 # Test documentation
+│       ├── 📄 vpc_test.go               # VPC module tests
+│       ├── 📄 ecs_test.go               # ECS module tests
+│       ├── 📄 rds_test.go               # RDS module tests
+│       ├── 📄 ec2_splunk_test.go        # EC2-Splunk module tests
+│       └── 📄 secrets_manager_test.go   # Secrets Manager module tests
 ```
 
 ## 📋 File Descriptions
@@ -153,6 +155,9 @@ gogs-fork-infrastructure-aws/
 | `GH-CREDENTIALS.md` | GitHub Actions CI credentials documentation | **Important** - CI security reference |
 | `JENKINS-CREDENTIALS.md` | Jenkins CD credentials documentation | **Important** - CD security reference |
 | `MODULES.md` | Terraform modules documentation | **Important** - Module reference and usage |
+| `.tflint.hcl` | TFLint configuration for Terraform linting | **Important** - Code quality |
+| `.checkov.yml` | Checkov security scanner configuration | **Important** - Security scanning |
+| `.gitleaks.toml` | GitLeaks secret scanner configuration | **Important** - Prevents credential leaks |
 
 ### Jenkins Pipelines
 
@@ -165,17 +170,18 @@ gogs-fork-infrastructure-aws/
 
 | File | Purpose |
 | ---- | ------- |
-| `test/vpc_test.go` | VPC module unit tests (CIDR validation, NAT Gateway, tagging) |
-| `test/ecs_test.go` | ECS module unit tests (container config, auto-scaling, Docker images) |
-| `test/rds_test.go` | RDS module unit tests (DB engines, instance classes, storage) |
-| `test/ec2_splunk_test.go` | EC2-Splunk module unit tests (instance types, volumes, network) |
-| `test/secrets_manager_test.go` | Secrets Manager unit tests (secret types, KMS, recovery window) |
+| `test/unit/vpc_test.go` | VPC module unit tests (CIDR validation, NAT Gateway, tagging) |
+| `test/unit/ecs_test.go` | ECS module unit tests (container config, auto-scaling, Docker images) |
+| `test/unit/rds_test.go` | RDS module unit tests (DB engines, instance classes, storage) |
+| `test/unit/ec2_splunk_test.go` | EC2-Splunk module unit tests (instance types, volumes, network) |
+| `test/unit/secrets_manager_test.go` | Secrets Manager unit tests (secret types, KMS, recovery window) |
+| `test/jenkins/JenkinsfilePipelineTest.groovy` | Jenkins pipeline unit tests (mocking, credential handling) |
 
 ### GitHub Actions
 
 | File | Purpose |
 | ---- | ------- |
-| `.github/workflows/ci.yml` | CI pipeline: `terraform fmt`, `validate`, `tflint`, `checkov`, `terragrunt validate` |
+| `.github/workflows/ci.yml` | CI pipeline: `terraform fmt`, `validate`, `tflint`, `checkov`, `gitleaks`, `terragrunt validate` |
 
 ### Terraform Modules
 
@@ -202,18 +208,19 @@ gogs-fork-infrastructure-aws/
 The CI pipeline runs on every push and pull request to validate the infrastructure code:
 
 ```text
-Push/PR → Format Check → Validate → TFLint → Checkov → Terragrunt Validate → Plan (PRs)
+Push/PR → Format → Validate → TFLint → Checkov → GitLeaks → Terragrunt Validate → Plan (PRs)
 ```
 
 **Jobs:**
 1. **terraform-fmt** - Checks Terraform formatting
 2. **terraform-validate** - Validates module syntax
-3. **tflint** - Lints Terraform code
-4. **checkov** - Security scanning
-5. **terragrunt-validate-staging** - Validates staging configuration
-6. **terragrunt-validate-production** - Validates production configuration
-7. **terragrunt-plan-staging** - Creates plan for PRs
-8. **docs-check** - Validates documentation exists
+3. **tflint** - Lints Terraform code for errors and best practices
+4. **checkov** - Security scanning for misconfigurations
+5. **gitleaks** - Scans for hardcoded secrets and credentials
+6. **terragrunt-validate-staging** - Validates staging configuration
+7. **terragrunt-validate-production** - Validates production configuration
+8. **terragrunt-plan-staging** - Creates plan for PRs
+9. **docs-check** - Validates documentation exists
 
 ### Jenkins (CD)
 
@@ -244,14 +251,15 @@ Manual Trigger → Discord Notify → Validate → Init → Plan → Approval �
 
 ### Prerequisites
 
-- Terraform >= 1.5.0
-- Terragrunt >= 0.53.0
-- AWS CLI configured with appropriate credentials
+- **Terraform** >= 1.5.7
+- **Terragrunt** >= 0.53.0
+- **AWS CLI** configured with appropriate credentials
 - **Terraform Cloud account** - Sign up at [https://app.terraform.io](https://app.terraform.io)
-- Jenkins (for CD) with Discord Notifier and Jira plugins
-- GitHub repository (for CI)
-- Discord webhook URL for notifications
-- Jira account with API access
+- **Go** 1.21+ (for running Terratest unit tests)
+- **Jenkins** (for CD) with Discord Notifier and Jira plugins
+- **GitHub repository** (for CI)
+- **Discord webhook URL** for notifications
+- **Jira account** with API access
 
 ### Initial Setup
 
@@ -312,29 +320,6 @@ cd vpc
 terragrunt apply
 ```
 
-### Post-Deployment - Ansible Configuration
-
-After infrastructure is provisioned, use your Ansible repository to configure software:
-
-```bash
-# 1. Export infrastructure outputs for Ansible inventory
-cd environments/us-east-1/staging
-
-# Get Splunk server IP
-export SPLUNK_IP=$(terragrunt output -raw splunk_public_ip --terragrunt-working-dir=ec2-splunk)
-
-# Get RDS endpoint
-export DB_ENDPOINT=$(terragrunt output -raw db_instance_endpoint --terragrunt-working-dir=rds)
-
-# 2. Update Ansible inventory with infrastructure details
-echo "[splunk]" > inventory/staging
-echo "splunk-server ansible_host=${SPLUNK_IP} ansible_user=ec2-user" >> inventory/staging
-
-# 3. Run Ansible playbooks (in your Ansible repository)
-ansible-playbook -i inventory/staging playbooks/splunk-install.yml
-ansible-playbook -i inventory/staging playbooks/splunk-configure.yml
-```
-
 **Key Outputs for Ansible:**
 - `splunk_public_ip` / `splunk_private_ip` - Server access
 - `data_volume_id` - EBS volume for /opt/splunk
@@ -387,19 +372,3 @@ When deploying all modules, Terragrunt handles dependencies automatically:
 4. ECS (depends on VPC, RDS, Secrets Manager)
 5. EC2 Splunk (depends on VPC, ECS, Secrets Manager)
 ```
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 👥 Contributing
-
-1. Create a feature branch from `main`
-2. Make your changes
-3. Ensure CI passes
-4. Create a Pull Request
-5. Wait for approval and merge
-
-## 📞 Support
-
-For issues or questions, please create a GitHub issue or contact the infrastructure team.
