@@ -481,7 +481,7 @@ def createJiraTicket(jiraUrl, jiraUser, jiraToken, projectKey, environment, acti
     def summary = "Infrastructure ${action} Failed - ${environment.toUpperCase()}"
 
     // Escape special characters in error message for Jira wiki markup
-    def safeErrorMessage = errorMessage.replaceAll('\\\\', '\\\\\\\\').replaceAll('\\{', '\\\\{').replaceAll('\\}', '\\\\}')
+    def safeErrorMessage = errorMessage.replaceAll('\\\\', '\\\\\\\\').replaceAll(/\{/, '\\\\{').replaceAll(/\}/, '\\\\}')
 
     def description = """
 h2. Infrastructure Pipeline Failure

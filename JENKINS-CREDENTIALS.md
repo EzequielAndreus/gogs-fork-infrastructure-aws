@@ -53,13 +53,13 @@ Terraform Cloud is used **ONLY for state storage**, not for running terraform.
 ### Required Credentials
 
 | Credential ID | Type | Value | Purpose |
-|--------------|------|-------|---------|
+| ------------ | ------ | ------- | --------- |
 | `tfc-organization` | Secret text | Your TFC organization name | Identifies TFC organization |
 | `tfc-api-token` | Secret text | TFC API token | Authenticates state backend |
 
 ### How to Create TFC Token
 
-1. **Log in**: Go to https://app.terraform.io
+1. **Log in**: Go to <https://app.terraform.io>
 2. **Navigate**: User Settings → Tokens
 3. **Create**: Click "Create an API token"
 4. **Name**: "Jenkins State Backend"
@@ -109,7 +109,7 @@ For each environment's workspaces (vpc, ecs, rds, etc.), configure in TFC:
 2. **Add** environment variables (mark as sensitive):
 
 | Variable Name | Type | Sensitive | Example Value |
-|---------------|------|-----------|---------------|
+| ---------------|------|-----------|---------------| |
 | `AWS_ACCESS_KEY_ID` | Environment | ✅ | `AKIA...` |
 | `AWS_SECRET_ACCESS_KEY` | Environment | ✅ | `wJalr...` |
 | `AWS_DEFAULT_REGION` | Environment | ❌ | `us-east-1` |
@@ -389,7 +389,7 @@ Navigate to Jenkins → **Manage Jenkins** → **Manage Credentials** → **Syst
 ### Jenkins Credentials List
 
 | Credential ID | Type | Description | Environment |
-|---------------|------|-------------|-------------|
+| --------------- | ------ | ------------- | ------------- |
 | `aws-infrastructure-credentials` | Username with password | AWS Access Key (username) and Secret Key (password) | Staging |
 | `aws-infrastructure-credentials-prod` | Username with password | AWS Access Key (username) and Secret Key (password) | Production |
 | `discord-webhook-staging` | Secret text | Discord webhook URL for staging notifications | Staging |
@@ -623,7 +623,7 @@ https://discord.com/api/webhooks/123456789012345678/AbCdEfGhIjKlMnOpQrStUvWxYz12
 ### Recommended Channel Setup
 
 | Channel | Purpose | Credential ID | Notifications |
-|---------|---------|---------------|---------------|
+| ---------|---------|---------------|---------------| |
 | `#infrastructure-staging` | Staging deployments | `discord-webhook-staging` | Plan, Apply start, Success, Failure |
 | `#infrastructure-production` | Production deployments | `discord-webhook-production` | Approval required, Apply start, Success, Failure |
 | `#infrastructure-alerts` | Critical alerts (optional) | `discord-webhook-alerts` | Production failures only |
@@ -633,7 +633,7 @@ https://discord.com/api/webhooks/123456789012345678/AbCdEfGhIjKlMnOpQrStUvWxYz12
 The pipeline sends these notification types:
 
 | Status | Color | Emoji | When Triggered |
-|--------|-------|-------|----------------|
+| --------|-------|-------|----------------| |
 | `STARTED` | Blue | 🚀 | Before apply starts |
 | `SUCCESS` | Green | ✅ | After successful apply |
 | `FAILURE` | Red | ❌ | On pipeline failure |
@@ -656,7 +656,7 @@ Jira integration enables automatic ticket creation when pipeline failures occur.
 ### Creating a Jira API Token
 
 1. **Navigate to Atlassian Account Settings:**
-   - Go to: https://id.atlassian.com/manage-profile/security/api-tokens
+   - Go to: <https://id.atlassian.com/manage-profile/security/api-tokens>
 
 2. **Create API Token:**
    - Click **"Create API token"**
@@ -718,7 +718,7 @@ Update these values:
 The API token user needs these permissions:
 
 | Permission | Purpose |
-|------------|---------|
+| ------------|---------| |
 | **Browse Projects** | View project details |
 | **Create Issues** | Create new tickets on failures |
 | **Assign Issues** (optional) | Auto-assign tickets |
@@ -728,7 +728,7 @@ The API token user needs these permissions:
 ### Jira API Endpoints Used
 
 | Endpoint | Method | Purpose |
-|----------|--------|---------|
+| ---------- | -------- | --------- |
 | `/rest/api/2/issue` | POST | Create new issue |
 
 ### Sample Jira Ticket Created on Failure
@@ -785,7 +785,7 @@ These environment variables are mapped from Jenkins credentials and used by Terr
 ### Staging Environment Variables
 
 | Variable | Credential ID | Description |
-|----------|---------------|-------------|
+| ----------|---------------|-------------| |
 | `TF_VAR_db_username` | `db-username-staging` | Database master username |
 | `TF_VAR_db_password` | `db-password-staging` | Database master password |
 | `TF_VAR_splunk_admin_password` | `splunk-admin-password-staging` | Splunk admin password |
@@ -796,7 +796,7 @@ These environment variables are mapped from Jenkins credentials and used by Terr
 ### Production Environment Variables
 
 | Variable | Credential ID | Description |
-|----------|---------------|-------------|
+| ----------|---------------|-------------| |
 | `TF_VAR_db_username` | `db-username-production` | Database master username |
 | `TF_VAR_db_password` | `db-password-production` | Database master password |
 | `TF_VAR_splunk_admin_password` | `splunk-admin-password-production` | Splunk admin password |
@@ -878,7 +878,7 @@ stage('Production') {
 ### Password Requirements
 
 | Secret | Minimum Length | Requirements |
-|--------|---------------|--------------|
+| --------|---------------|--------------| |
 | AWS Secret Access Key | N/A | Generated by AWS |
 | Database Password | 16 characters | Uppercase, lowercase, numbers, special chars |
 | Splunk Password | 12 characters | Uppercase, lowercase, numbers |
@@ -889,7 +889,7 @@ stage('Production') {
 ### Rotation Schedule
 
 | Secret | Rotation Frequency | Impact | Downtime Required |
-|--------|-------------------|--------|-------------------|
+| --------|-------------------|--------|-------------------| |
 | AWS Access Keys | Every 90 days | Update Jenkins credentials | No |
 | Database Password | Every 90 days | Update credentials + trigger deployment | Yes (brief) |
 | Splunk Password | Every 90 days | Update credentials + trigger deployment | Yes (brief) |
@@ -968,7 +968,7 @@ NEW_PASSWORD=$(openssl rand -base64 24)
 
 ```bash
 # 1. Create new API token
-# Go to: https://id.atlassian.com/manage-profile/security/api-tokens
+# Go to: <https://id.atlassian.com/manage-profile/security/api-tokens>
 # Create new token labeled "Jenkins CD Pipeline - 2025-03"
 
 # 2. Update Jenkins credential
@@ -1004,7 +1004,7 @@ NEW_PASSWORD=$(openssl rand -base64 24)
 ### Common Issues
 
 | Issue | Cause | Solution |
-|-------|-------|----------|
+| -------|-------|----------| |
 | "Access Denied" in Terraform | Missing IAM permissions | Check IAM policy includes required actions |
 | "Invalid credentials" error | Incorrect credential ID | Verify credential ID matches Jenkinsfile exactly |
 | "Credential not found" | Credential deleted or renamed | Check credential exists in Jenkins |

@@ -10,3 +10,12 @@ description = "Test AWS access keys in JenkinsfilePipelineTest.groovy"
 [[allowlist.paths]]
 regex = "test/jenkins/JenkinsfilePipelineTest.groovy"
 description = "Test file with mock credentials"
+
+# Ignore documentation files with example credentials
+[[allowlist.paths]]
+regex = "JENKINS-CREDENTIALS.md"
+description = "Documentation file with example/placeholder credentials"
+
+[[allowlist.paths]]
+regex = "GH-CREDENTIALS.md"
+description = "Documentation file with example/placeholder credentials"

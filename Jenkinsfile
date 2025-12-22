@@ -53,7 +53,6 @@ pipeline {
         //----------------------------------------------------------------------
         DISCORD_WEBHOOK_STAGING = credentials('discord-webhook-staging')
         DISCORD_WEBHOOK_PRODUCTION = credentials('discord-webhook-production')
-
     }
 
     parameters {
@@ -380,7 +379,7 @@ pipeline {
                     if (logs) {
                         errorMessage = logs.join('\n')
                         if (errorMessage.length() > 2000) {
-                            errorMessage = errorMessage.substring(0, 2000) + "\n...[truncated]"
+                            errorMessage = errorMessage.substring(0, 2000) + '\n...[truncated]'
                         }
                     }
                 } catch (Exception e) {
